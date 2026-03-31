@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  // Suppress ccxt server-side warning (it's only used client-side)
+  turbopack: {},
+  serverExternalPackages: ['ccxt'],
+}
 
-export default nextConfig;
+export default nextConfig

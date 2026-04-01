@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Search, CheckCircle2, Circle } from 'lucide-react'
+import { useLocale } from '@/contexts/LocaleContext'
 import type { CryptoAsset, TickerData } from '@/types'
 
 export const SUPPORTED_ASSETS: CryptoAsset[] = [
@@ -19,8 +20,6 @@ export const SUPPORTED_ASSETS: CryptoAsset[] = [
   { symbol: 'SUI/USDT', id: 'sui-sui', name: 'Sui', shortName: 'SUI', color: '#6FBCF0' },
 ]
 
-const MAX_SELECT = 5
-
 interface Props {
   selected: string[]
   onChange: (symbols: string[]) => void
@@ -29,6 +28,7 @@ interface Props {
 
 export function CryptoSelector({ selected, onChange, tickers }: Props) {
   const [query, setQuery] = useState('')
+  const { t } = useLocale()
 
   const filtered = SUPPORTED_ASSETS.filter(
     (a) =>
@@ -38,19 +38,18 @@ export function CryptoSelector({ selected, onChange, tickers }: Props) {
 
   function toggle(symbol: string) {
     if (selected.includes(symbol)) {
-      onChange(selected.filter((s) => s !== symbol))
-    } else if (selected.length < MAX_SELECT) {
-      onChange([...selected, symbol])
+      onChange([])
+    } else {
+      onChange([symbol])
     }
   }
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs uppercase tracking-widest text-muted font-mono">选择币种</h3>
-        <span className="text-xs text-muted font-mono">
-          {selected.length}/{MAX_SELECT}
-        </span>
+        <h3 className="text-xs uppercase tracking-widest text-muted font-mono">
+          {t.cryptoSelector.title}
+        </h3>
       </div>
 
       {/* Search */}
@@ -60,7 +59,7 @@ export function CryptoSelector({ selected, onChange, tickers }: Props) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索..."
+          placeholder={t.cryptoSelector.searchPlaceholder}
           className="w-full pl-9 pr-3 py-2 rounded-xl bg-surface border border-themed text-xs font-mono text-foreground placeholder:text-muted focus:outline-none focus:border-accent/50 transition-colors"
         />
       </div>
@@ -70,13 +69,11 @@ export function CryptoSelector({ selected, onChange, tickers }: Props) {
         {filtered.map((asset) => {
           const isSelected = selected.includes(asset.symbol)
           const ticker = tickers[asset.symbol]
-          const isDisabled = !isSelected && selected.length >= MAX_SELECT
 
           return (
             <button
               key={asset.symbol}
               onClick={() => toggle(asset.symbol)}
-              disabled={isDisabled}
               aria-pressed={isSelected}
               className={[
                 'flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all duration-150',
@@ -84,7 +81,7 @@ export function CryptoSelector({ selected, onChange, tickers }: Props) {
                 isSelected
                   ? 'bg-accent/10 border border-accent/20'
                   : 'hover:bg-surface border border-transparent',
-                isDisabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
+                'cursor-pointer',
               ].join(' ')}
             >
               {/* Color dot */}
@@ -144,7 +141,7 @@ export function CryptoSelector({ selected, onChange, tickers }: Props) {
                   backgroundColor: asset.color + '11',
                   color: asset.color,
                 }}
-                aria-label={`移除 ${asset.name}`}
+                aria-label={`${t.cryptoSelector.removePrefix}${asset.name}`}
               >
                 {asset.shortName}
                 <span className="text-[8px] opacity-60">✕</span>

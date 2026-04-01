@@ -7,6 +7,8 @@ import { Card } from './ui/Card'
 import { Button } from './ui/Button'
 import { Badge } from './ui/Badge'
 import { placeOrders, type OrderResult } from '@/lib/ccxt-client'
+import { loadExchangeCredentials } from './SettingsModal'
+import { useLocale } from '@/contexts/LocaleContext'
 
 interface Props {
   orders: CCXTOrder[]
@@ -14,13 +16,17 @@ interface Props {
 }
 
 export function OrderPreview({ orders, onOrdersExecuted }: Props) {
+  const saved = loadExchangeCredentials()
   const [showApiForm, setShowApiForm] = useState(false)
-  const [apiKey, setApiKey] = useState('')
-  const [apiSecret, setApiSecret] = useState('')
+  const [apiKey, setApiKey] = useState(saved.apiKey)
+  const [apiSecret, setApiSecret] = useState(saved.apiSecret)
   const [showSecret, setShowSecret] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
   const [executeError, setExecuteError] = useState<string | null>(null)
   const [executed, setExecuted] = useState(false)
+  const { t } = useLocale()
+
+  const hasSavedCredentials = Boolean(saved.apiKey && saved.apiSecret)
 
   async function handleExecute() {
     if (!apiKey || !apiSecret) return
@@ -30,13 +36,19 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
       const results = await placeOrders(orders, apiKey, apiSecret)
       setExecuted(true)
       onOrdersExecuted(results)
-      setApiKey('')
-      setApiSecret('')
       setShowApiForm(false)
     } catch (err) {
-      setExecuteError(err instanceof Error ? err.message : '下单失败，请检查 API Key 和账户余额')
+      setExecuteError(err instanceof Error ? err.message : t.orderPreview.orderFailed)
     } finally {
       setIsExecuting(false)
+    }
+  }
+
+  function handleClickExecute() {
+    if (hasSavedCredentials) {
+      handleExecute()
+    } else {
+      setShowApiForm(true)
     }
   }
 
@@ -44,7 +56,7 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
     return (
       <Card className="flex flex-col items-center justify-center min-h-40 text-center gap-3">
         <ShoppingCart className="size-8 text-muted/30" />
-        <p className="text-xs text-muted font-mono">分析完成后将在此显示订单</p>
+        <p className="text-xs text-muted font-mono">{t.orderPreview.emptyMessage}</p>
       </Card>
     )
   }
@@ -54,9 +66,13 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShoppingCart className="size-4 text-accent" />
-          <span className="text-xs uppercase tracking-widest text-muted font-mono">建议订单</span>
+          <span className="text-xs uppercase tracking-widest text-muted font-mono">
+            {t.orderPreview.title}
+          </span>
         </div>
-        <Badge variant="info">{orders.length} 笔</Badge>
+        <Badge variant="info">
+          {orders.length}{t.orderPreview.countSuffix ? ` ${t.orderPreview.countSuffix}` : ''}
+        </Badge>
       </div>
 
       {orders.map((order, i) => (
@@ -65,32 +81,34 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
             <span className="text-sm font-mono font-semibold text-foreground">{order.symbol}</span>
             <div className="flex items-center gap-1.5">
               <Badge variant={order.side === 'buy' ? 'success' : 'danger'}>
-                {order.side === 'buy' ? '买入' : '卖出'}
+                {order.side === 'buy' ? t.orderPreview.buy : t.orderPreview.sell}
               </Badge>
-              <Badge variant="neutral">{order.type === 'limit' ? '限价' : '市价'}</Badge>
+              <Badge variant="neutral">
+                {order.type === 'limit' ? t.orderPreview.limit : t.orderPreview.market}
+              </Badge>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] font-mono">
             <div className="flex items-center justify-between">
-              <span className="text-muted">数量</span>
+              <span className="text-muted">{t.orderPreview.quantity}</span>
               <span className="tabular-nums text-foreground">{order.amount}</span>
             </div>
             {order.price && (
               <div className="flex items-center justify-between">
-                <span className="text-muted">价格</span>
+                <span className="text-muted">{t.orderPreview.price}</span>
                 <span className="tabular-nums text-foreground">${order.price.toLocaleString()}</span>
               </div>
             )}
             {order.params?.stopLoss && (
               <div className="flex items-center justify-between">
-                <span className="text-muted">止损</span>
+                <span className="text-muted">{t.orderPreview.stopLoss}</span>
                 <span className="tabular-nums text-danger">${order.params.stopLoss.toLocaleString()}</span>
               </div>
             )}
             {order.params?.takeProfit && (
               <div className="flex items-center justify-between">
-                <span className="text-muted">止盈</span>
+                <span className="text-muted">{t.orderPreview.takeProfit}</span>
                 <span className="tabular-nums text-success">${order.params.takeProfit.toLocaleString()}</span>
               </div>
             )}
@@ -107,16 +125,16 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
       {!executed && (
         <div className="flex flex-col gap-2">
           {!showApiForm ? (
-            <Button variant="primary" size="md" className="w-full" onClick={() => setShowApiForm(true)}>
+            <Button variant="primary" size="md" className="w-full" loading={isExecuting} onClick={handleClickExecute}>
               <Zap className="size-4" />
-              执行下单
+              {t.orderPreview.executeButton}
             </Button>
           ) : (
             <Card className="flex flex-col gap-3 border border-warning/20 bg-warning/5">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="size-4 text-warning flex-shrink-0 mt-0.5" />
                 <p className="text-[10px] text-warning/80 font-mono leading-relaxed">
-                  API Key 仅用于本次下单，不会持久存储，关闭页面即清除
+                  {t.orderPreview.apiKeyWarning}
                 </p>
               </div>
 
@@ -141,7 +159,7 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
                   <button
                     onClick={() => setShowSecret((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
-                    aria-label={showSecret ? '隐藏 Secret' : '显示 Secret'}
+                    aria-label={showSecret ? t.orderPreview.hideSecret : t.orderPreview.showSecret}
                   >
                     {showSecret ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                   </button>
@@ -159,7 +177,7 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
                   className="flex-1"
                   onClick={() => { setShowApiForm(false); setExecuteError(null) }}
                 >
-                  取消
+                  {t.orderPreview.cancelButton}
                 </Button>
                 <Button
                   variant="primary"
@@ -169,7 +187,7 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
                   disabled={!apiKey || !apiSecret}
                   onClick={handleExecute}
                 >
-                  确认下单
+                  {t.orderPreview.confirmOrderButton}
                 </Button>
               </div>
             </Card>
@@ -180,7 +198,7 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
       {executed && (
         <Card className="flex items-center gap-2 border border-success/20 bg-success/5">
           <CheckCircle2 className="size-4 text-success flex-shrink-0" />
-          <span className="text-xs text-success font-mono">订单已成功提交至 BYDFi</span>
+          <span className="text-xs text-success font-mono">{t.orderPreview.orderSuccess}</span>
         </Card>
       )}
     </div>

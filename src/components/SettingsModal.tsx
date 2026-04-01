@@ -3,7 +3,27 @@
 import { useState } from 'react'
 import { X, Key, Eye, EyeOff } from 'lucide-react'
 import { Button } from './ui/Button'
+import { useLocale } from '@/contexts/LocaleContext'
 import type { AIProvider } from '@/types'
+
+const EXCHANGE_KEY_SESSION = 'exchange_api_key'
+const EXCHANGE_SECRET_SESSION = 'exchange_api_secret'
+
+export function loadExchangeCredentials(): { apiKey: string; apiSecret: string } {
+  if (typeof window === 'undefined') return { apiKey: '', apiSecret: '' }
+  return {
+    apiKey: sessionStorage.getItem(EXCHANGE_KEY_SESSION) ?? '',
+    apiSecret: sessionStorage.getItem(EXCHANGE_SECRET_SESSION) ?? '',
+  }
+}
+
+function saveExchangeCredentials(apiKey: string, apiSecret: string) {
+  if (typeof window === 'undefined') return
+  if (apiKey) sessionStorage.setItem(EXCHANGE_KEY_SESSION, apiKey)
+  else sessionStorage.removeItem(EXCHANGE_KEY_SESSION)
+  if (apiSecret) sessionStorage.setItem(EXCHANGE_SECRET_SESSION, apiSecret)
+  else sessionStorage.removeItem(EXCHANGE_SECRET_SESSION)
+}
 
 interface Props {
   isOpen: boolean
@@ -29,7 +49,7 @@ const PROVIDERS: { value: AIProvider; label: string; placeholder: string; hint: 
   {
     value: 'glm',
     label: '智谱 GLM',
-    placeholder: '请输入智谱 API Key',
+    placeholder: '',
     hint: 'open.bigmodel.cn/usercenter/apikeys',
   },
 ]
@@ -38,10 +58,18 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>(provider)
   const [input, setInput] = useState(apiKey)
   const [show, setShow] = useState(false)
+  const { t } = useLocale()
+
+  // Exchange credentials (loaded from sessionStorage)
+  const [exchangeKey, setExchangeKey] = useState(() => loadExchangeCredentials().apiKey)
+  const [exchangeSecret, setExchangeSecret] = useState(() => loadExchangeCredentials().apiSecret)
+  const [showExchangeSecret, setShowExchangeSecret] = useState(false)
 
   if (!isOpen) return null
 
   const current = PROVIDERS.find((p) => p.value === selectedProvider)!
+  // Use translated placeholder for GLM
+  const placeholder = selectedProvider === 'glm' ? t.settings.glmPlaceholder : current.placeholder
 
   function handleProviderChange(p: AIProvider) {
     setSelectedProvider(p)
@@ -50,6 +78,7 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
 
   function handleSave() {
     onSave(selectedProvider, input.trim())
+    saveExchangeCredentials(exchangeKey.trim(), exchangeSecret.trim())
     onClose()
   }
 
@@ -58,7 +87,7 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="设置"
+      aria-label={t.settings.title}
     >
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm -z-10"
@@ -70,12 +99,12 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Key className="size-4 text-accent" />
-            <h2 className="text-sm font-heading font-bold text-foreground">API 设置</h2>
+            <h2 className="text-sm font-heading font-bold text-foreground">{t.settings.title}</h2>
           </div>
           <button
             onClick={onClose}
             className="size-8 rounded-xl flex items-center justify-center hover:bg-surface text-muted hover:text-foreground transition-colors"
-            aria-label="关闭"
+            aria-label={t.settings.closeAriaLabel}
           >
             <X className="size-4" />
           </button>
@@ -83,7 +112,9 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
 
         {/* Provider selector */}
         <div className="flex flex-col gap-2">
-          <span className="text-xs uppercase tracking-widest text-muted font-mono">AI 提供商</span>
+          <span className="text-xs uppercase tracking-widest text-muted font-mono">
+            {t.settings.aiProvider}
+          </span>
           <div className="flex gap-1 p-1 bg-surface rounded-xl">
             {PROVIDERS.map((p) => (
               <button
@@ -102,7 +133,7 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
           </div>
         </div>
 
-        {/* API Key input */}
+        {/* AI API Key input */}
         <div className="flex flex-col gap-2">
           <label className="text-xs uppercase tracking-widest text-muted font-mono">
             {current.label} API Key
@@ -112,28 +143,73 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
               type={show ? 'text' : 'password'}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={current.placeholder}
+              placeholder={placeholder}
               className="w-full px-4 py-2.5 pr-10 rounded-xl bg-surface border border-themed text-sm font-mono text-foreground placeholder:text-muted focus:outline-none focus:border-accent/50 transition-colors"
               autoComplete="off"
             />
             <button
               onClick={() => setShow((v) => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
-              aria-label={show ? '隐藏 Key' : '显示 Key'}
+              aria-label={show ? t.settings.hideKey : t.settings.showKey}
             >
               {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </div>
+          <p className="text-[10px] text-muted font-mono leading-relaxed whitespace-pre-line">
+            {t.settings.apiKeyHintPrefix}{current.hint}
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-white/[0.06]" />
+
+        {/* Exchange API credentials */}
+        <div className="flex flex-col gap-3">
+          <span className="text-xs uppercase tracking-widest text-muted font-mono">
+            {t.settings.exchangeTitle}
+          </span>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] text-muted font-mono">{t.settings.exchangeKeyLabel}</label>
+            <input
+              type="text"
+              value={exchangeKey}
+              onChange={(e) => setExchangeKey(e.target.value)}
+              placeholder="BYDFi API Key"
+              className="w-full px-4 py-2.5 rounded-xl bg-surface border border-themed text-sm font-mono text-foreground placeholder:text-muted focus:outline-none focus:border-accent/50 transition-colors"
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] text-muted font-mono">{t.settings.exchangeSecretLabel}</label>
+            <div className="relative">
+              <input
+                type={showExchangeSecret ? 'text' : 'password'}
+                value={exchangeSecret}
+                onChange={(e) => setExchangeSecret(e.target.value)}
+                placeholder="BYDFi API Secret"
+                className="w-full px-4 py-2.5 pr-10 rounded-xl bg-surface border border-themed text-sm font-mono text-foreground placeholder:text-muted focus:outline-none focus:border-accent/50 transition-colors"
+                autoComplete="off"
+              />
+              <button
+                onClick={() => setShowExchangeSecret((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                aria-label={showExchangeSecret ? t.settings.hideSecret : t.settings.showSecret}
+              >
+                {showExchangeSecret ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </div>
+
           <p className="text-[10px] text-muted font-mono leading-relaxed">
-            API Key 仅保存在当前浏览器 sessionStorage，关闭标签即清除。
-            <br />
-            获取地址：{current.hint}
+            {t.settings.exchangeHint}
           </p>
         </div>
 
         <div className="flex gap-2">
           <Button variant="secondary" size="md" className="flex-1" onClick={onClose}>
-            取消
+            {t.settings.cancel}
           </Button>
           <Button
             variant="primary"
@@ -142,7 +218,7 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
             disabled={!input.trim()}
             onClick={handleSave}
           >
-            保存
+            {t.settings.save}
           </Button>
         </div>
       </div>

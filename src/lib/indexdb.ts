@@ -44,6 +44,11 @@ export async function updateAnalysis(id: string, patch: Partial<AnalysisRecord>)
   }
 }
 
+export async function deleteAnalysis(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete(STORE_NAME, id)
+}
+
 export async function clearAllAnalyses(): Promise<void> {
   const db = await getDB()
   await db.clear(STORE_NAME)

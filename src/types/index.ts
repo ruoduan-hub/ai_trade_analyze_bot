@@ -39,11 +39,32 @@ export interface NewsItem {
   source?: string
 }
 
+export interface GlobalMarketData {
+  totalMarketCapUsd: number
+  btcDominance: number
+  ethDominance: number
+  marketCapChange24hPercent: number
+  activeCryptocurrencies: number
+}
+
+export interface BtcOnchainData {
+  mempoolTxCount: number
+  fastestFeeRate: number   // sat/vB
+  halfHourFeeRate: number
+  hourFeeRate: number
+}
+
 export interface MarketSnapshot {
   tickers: Record<string, TickerData>
   fearGreed: FearGreedData | null
   news: NewsItem[]
   defiTvl?: number
+  globalMarket?: GlobalMarketData
+  /** symbol (e.g. 'BTC/USDT') → 8h funding rate, e.g. 0.0001 = 0.01% */
+  fundingRates?: Record<string, number>
+  /** symbol → open interest in USD */
+  openInterest?: Record<string, number>
+  btcOnchain?: BtcOnchainData
   fetchedAt: number
 }
 

@@ -1,41 +1,29 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Trash2, ChevronRight, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
+import { X, Trash2, ChevronRight, Clock, AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react'
 import type { AnalysisRecord } from '@/types'
-import { getAllAnalyses, clearAllAnalyses } from '@/lib/indexdb'
+import { getAllAnalyses, clearAllAnalyses, deleteAnalysis } from '@/lib/indexdb'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
 import { Badge } from './ui/Badge'
-
-const INTENT_LABELS: Record<string, string> = {
-  aggressive: '进取',
-  steady: '稳健',
-  conservative: '保守',
-}
-const PERIOD_LABELS: Record<string, string> = {
-  short: '短期',
-  mid: '中期',
-  long: '长期',
-}
-const INTENT_VARIANTS: Record<string, 'danger' | 'warning' | 'success'> = {
-  aggressive: 'danger',
-  steady: 'warning',
-  conservative: 'success',
-}
+import { MarkdownRenderer } from './ui/MarkdownRenderer'
+import { useLocale } from '@/contexts/LocaleContext'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
   refreshTrigger: number
+  onReuse: (record: AnalysisRecord) => void
 }
 
-export function HistoryPanel({ isOpen, onClose, refreshTrigger }: Props) {
+export function HistoryPanel({ isOpen, onClose, refreshTrigger, onReuse }: Props) {
   const [records, setRecords] = useState<AnalysisRecord[]>([])
   const [selected, setSelected] = useState<AnalysisRecord | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const { t, locale } = useLocale()
 
   useEffect(() => {
     if (!isOpen) return
@@ -45,6 +33,10 @@ export function HistoryPanel({ isOpen, onClose, refreshTrigger }: Props) {
       .finally(() => setIsLoading(false))
   }, [isOpen, refreshTrigger])
 
+  useEffect(() => {
+    if (!isOpen) setSelected(null)
+  }, [isOpen])
+
   async function handleClearAll() {
     await clearAllAnalyses()
     setRecords([])
@@ -52,79 +44,113 @@ export function HistoryPanel({ isOpen, onClose, refreshTrigger }: Props) {
     setConfirmClear(false)
   }
 
-  if (!isOpen) return null
+  async function handleDeleteOne(id: string) {
+    await deleteAnalysis(id)
+    setRecords((prev) => prev.filter((r) => r.id !== id))
+    if (selected?.id === id) setSelected(null)
+    setConfirmDeleteId(null)
+  }
+
+  function handleReuse(record: AnalysisRecord) {
+    onReuse(record)
+    onClose()
+  }
+
+  const intentLabels = {
+    aggressive: t.investmentConfig.intents.aggressive.label,
+    steady: t.investmentConfig.intents.steady.label,
+    conservative: t.investmentConfig.intents.conservative.label,
+  }
+  const periodLabels = {
+    short: t.investmentConfig.periods.short.label,
+    mid: t.investmentConfig.periods.mid.label,
+    long: t.investmentConfig.periods.long.label,
+  }
+
+  const INTENT_VARIANTS: Record<string, 'danger' | 'warning' | 'success'> = {
+    aggressive: 'danger',
+    steady: 'warning',
+    conservative: 'success',
+  }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      role="dialog"
-      aria-modal="true"
-      aria-label="分析历史"
-    >
-      {/* 蒙层 - 不设置 z-index，利用 DOM 顺序 */}
+    <>
+      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className={[
+          'fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300',
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+        ].join(' ')}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* 弹窗 - 后渲染，自然覆盖在蒙层之上 */}
-      <div className="relative w-full max-w-4xl bg-bg-base border border-themed-dim rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl animate-slide-up">
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 rounded-full bg-surface" />
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 pb-4 border-b border-themed-dim">
-          <div className="flex items-center gap-2">
-            <Clock className="size-4 text-accent" />
-            <h2 className="text-sm font-heading font-bold text-foreground">分析历史</h2>
-            <Badge variant="info">{records.length}</Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            {records.length > 0 && !confirmClear && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setConfirmClear(true)}
-                className="text-muted hover:text-danger"
-              >
-                <Trash2 className="size-3.5" />
-                清除全部
-              </Button>
-            )}
-            {confirmClear && (
-              <div className="flex items-center gap-2 glass rounded-xl px-3 py-1.5 border border-danger/20">
-                <AlertTriangle className="size-3.5 text-danger" />
-                <span className="text-[10px] text-danger font-mono">确认清除所有记录?</span>
-                <button
-                  onClick={handleClearAll}
-                  className="text-[10px] font-mono text-danger underline hover:no-underline"
-                >
-                  确认
-                </button>
-                <button
-                  onClick={() => setConfirmClear(false)}
-                  className="text-[10px] font-mono text-muted hover:text-foreground"
-                >
-                  取消
-                </button>
-              </div>
-            )}
+      {/* Left drawer */}
+      <div
+        className={[
+          'fixed top-0 left-0 z-50 h-full flex transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+        ].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t.historyPanel.dialogAriaLabel}
+      >
+        {/* List panel */}
+        <div className="w-72 h-full bg-bg-base border-r border-themed-dim flex flex-col shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-4 border-b border-themed-dim flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <Clock className="size-4 text-accent" />
+              <h2 className="text-sm font-heading font-bold text-foreground">{t.historyPanel.title}</h2>
+              <Badge variant="info">{records.length}</Badge>
+            </div>
             <button
               onClick={onClose}
               className="size-8 rounded-xl flex items-center justify-center hover:bg-surface text-muted hover:text-foreground transition-colors"
-              aria-label="关闭"
+              aria-label={t.historyPanel.closeAriaLabel}
             >
               <X className="size-4" />
             </button>
           </div>
-        </div>
 
-        {/* Body */}
-        <div className="flex flex-1 overflow-hidden">
+          {/* Clear all action */}
+          {records.length > 0 && (
+            <div className="px-4 py-2 border-b border-themed-dim flex-shrink-0">
+              {!confirmClear ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmClear(true)}
+                  className="text-muted hover:text-danger w-full justify-start"
+                >
+                  <Trash2 className="size-3.5" />
+                  {t.historyPanel.clearAll}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 glass rounded-xl px-3 py-2 border border-danger/20">
+                  <AlertTriangle className="size-3.5 text-danger flex-shrink-0" />
+                  <span className="text-[10px] text-danger font-mono flex-1">
+                    {t.historyPanel.confirmClearMsg}
+                  </span>
+                  <button
+                    onClick={handleClearAll}
+                    className="text-[10px] font-mono text-danger underline hover:no-underline"
+                  >
+                    {t.historyPanel.confirm}
+                  </button>
+                  <button
+                    onClick={() => setConfirmClear(false)}
+                    className="text-[10px] font-mono text-muted hover:text-foreground"
+                  >
+                    {t.historyPanel.cancel}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* List */}
-          <div className={`flex flex-col gap-2 p-4 overflow-y-auto ${selected ? 'w-80 flex-shrink-0 border-r border-themed-dim' : 'flex-1'}`}>
+          <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
             {isLoading && (
               <div className="flex items-center justify-center py-12">
                 <div className="size-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -134,107 +160,123 @@ export function HistoryPanel({ isOpen, onClose, refreshTrigger }: Props) {
             {!isLoading && records.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
                 <Clock className="size-10 text-muted/20" />
-                <p className="text-xs text-muted font-mono">暂无历史记录</p>
+                <p className="text-xs text-muted font-mono">{t.historyPanel.empty}</p>
               </div>
             )}
 
             {records.map((record) => (
-              <button
-                key={record.id}
-                onClick={() => setSelected(selected?.id === record.id ? null : record)}
-                className={[
-                  'text-left p-3 rounded-xl border transition-all duration-150 hover:bg-surface',
-                  selected?.id === record.id
-                    ? 'border-accent/30 bg-accent/5'
-                    : 'border-themed-dim',
-                ].join(' ')}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {record.symbols.map((sym) => (
-                        <span key={sym} className="text-[10px] font-mono text-foreground bg-surface px-1.5 py-0.5 rounded">
-                          {sym.replace('/USDT', '')}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={INTENT_VARIANTS[record.intent] ?? 'neutral'}>
-                        {INTENT_LABELS[record.intent]}
-                      </Badge>
-                      <Badge variant="info">{PERIOD_LABELS[record.period]}</Badge>
-                      {record.executed && (
-                        <Badge variant="success">
-                          <CheckCircle2 className="size-2.5" />已执行
+              <div key={record.id} className="relative group">
+                <button
+                  onClick={() => setSelected(selected?.id === record.id ? null : record)}
+                  className={[
+                    'text-left p-3 rounded-xl border transition-all duration-150 hover:bg-surface w-full pr-8',
+                    selected?.id === record.id
+                      ? 'border-accent/30 bg-accent/5'
+                      : 'border-themed-dim',
+                  ].join(' ')}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {record.symbols.map((sym) => (
+                          <span key={sym} className="text-[10px] font-mono text-foreground bg-surface px-1.5 py-0.5 rounded">
+                            {sym.replace('/USDT', '')}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        <Badge variant={INTENT_VARIANTS[record.intent] ?? 'neutral'}>
+                          {intentLabels[record.intent]}
                         </Badge>
-                      )}
+                        <Badge variant="info">{periodLabels[record.period]}</Badge>
+                        {record.executed && (
+                          <Badge variant="success">
+                            <CheckCircle2 className="size-2.5" />{t.historyPanel.executed}
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted font-mono truncate">
+                        ${record.amount.toLocaleString()} · {new Date(record.timestamp).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US')}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-muted font-mono">
-                      ${record.amount.toLocaleString()} USDT ·{' '}
-                      {new Date(record.timestamp).toLocaleString('zh-CN')}
-                    </span>
+                    <ChevronRight
+                      className={`size-4 text-muted flex-shrink-0 mt-0.5 transition-transform ${selected?.id === record.id ? 'rotate-90' : ''}`}
+                    />
                   </div>
-                  <ChevronRight
-                    className={`size-4 text-muted flex-shrink-0 mt-0.5 transition-transform ${selected?.id === record.id ? 'rotate-90' : ''}`}
-                  />
-                </div>
-              </button>
+                </button>
+
+                {/* Single delete button */}
+                {confirmDeleteId === record.id ? (
+                  <div className="absolute inset-0 rounded-xl bg-bg-elevated border border-danger/30 flex items-center justify-center gap-3 px-3">
+                    <span className="text-[10px] font-mono text-danger flex-1">
+                      {t.historyPanel.deleteConfirmMsg}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteOne(record.id)}
+                      className="text-[10px] font-mono text-danger underline hover:no-underline"
+                    >
+                      {t.historyPanel.confirm}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="text-[10px] font-mono text-muted hover:text-foreground"
+                    >
+                      {t.historyPanel.cancel}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(record.id) }}
+                    className="absolute top-2 right-2 size-6 rounded-lg flex items-center justify-center text-muted hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                    aria-label={t.historyPanel.deleteAriaLabel}
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
+        </div>
 
-          {/* Detail */}
+        {/* Detail panel */}
+        <div
+          className={[
+            'h-full bg-bg-elevated border-r border-themed-dim flex flex-col shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden',
+            selected ? 'w-[480px] opacity-100' : 'w-0 opacity-0',
+          ].join(' ')}
+        >
           {selected && (
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-mono font-semibold text-foreground">
-                  {new Date(selected.timestamp).toLocaleString('zh-CN')}
+            <>
+              <div className="flex items-center justify-between px-4 py-4 border-b border-themed-dim flex-shrink-0 gap-3">
+                <h3 className="text-xs font-mono font-semibold text-foreground truncate">
+                  {new Date(selected.timestamp).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US')}
                 </h3>
-                <button
-                  onClick={() => setSelected(null)}
-                  className="text-muted hover:text-foreground text-xs font-mono"
-                >
-                  关闭详情
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleReuse(selected)}
+                  >
+                    <RotateCcw className="size-3" />
+                    {t.historyPanel.reuseButton}
+                  </Button>
+                  <button
+                    onClick={() => setSelected(null)}
+                    className="size-8 rounded-xl flex items-center justify-center hover:bg-surface text-muted hover:text-foreground transition-colors"
+                    aria-label={t.historyPanel.closeDetailAriaLabel}
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
               </div>
 
-              <ReactMarkdown
-                components={{
-                  h2: ({ children }) => (
-                    <h2 className="text-sm font-heading font-bold text-foreground mt-4 mb-2">{children}</h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3 className="text-xs font-mono font-semibold text-accent mt-3 mb-1 uppercase">{children}</h3>
-                  ),
-                  p: ({ children }) => (
-                    <p className="text-xs font-mono text-foreground/80 leading-relaxed mb-2">{children}</p>
-                  ),
-                  li: ({ children }) => (
-                    <li className="flex items-start gap-2 text-xs font-mono text-foreground/70 mb-1">
-                      <span className="text-accent">›</span>
-                      <span>{children}</span>
-                    </li>
-                  ),
-                  code: ({ children, className }) => {
-                    if (className?.includes('language-json')) {
-                      return (
-                        <code className="block text-[10px] font-mono text-success/80 bg-success/5 border border-success/10 rounded-lg p-3 whitespace-pre-wrap">
-                          {children}
-                        </code>
-                      )
-                    }
-                    return (
-                      <code className="text-[10px] font-mono text-accent bg-accent/10 rounded px-1">{children}</code>
-                    )
-                  },
-                  pre: ({ children }) => <pre className="my-3 overflow-hidden rounded-lg">{children}</pre>,
-                }}
-              >
-                {selected.report}
-              </ReactMarkdown>
-            </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <MarkdownRenderer content={selected.report} variant="compact" />
+              </div>
+            </>
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }

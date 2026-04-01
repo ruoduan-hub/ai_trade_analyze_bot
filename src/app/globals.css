@@ -64,6 +64,8 @@ html {
   --surface-bg: rgba(255,255,255,0.03);
   --border-base: rgba(255,255,255,0.08);
   --border-dim: rgba(255,255,255,0.04);
+  --dropdown-bg: rgba(6,6,8,0.94);
+  --dropdown-border: rgba(255,255,255,0.09);
 }
 
 /* Light theme overrides — all colour tokens + surface vars. */
@@ -79,6 +81,8 @@ html {
   --surface-bg: rgba(0,0,0,0.02);
   --border-base: rgba(0,0,0,0.1);
   --border-dim: rgba(0,0,0,0.05);
+  --dropdown-bg: rgba(248,249,250,0.97);
+  --dropdown-border: rgba(0,0,0,0.1);
 }
 
 body {

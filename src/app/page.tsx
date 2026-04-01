@@ -75,6 +75,7 @@ function HomeContent() {
 
   // ── 主题 ────────────────────────────────────────────────────
   const { theme, toggleTheme, mounted } = useTheme()
+  const { locale } = useLocale()
 
   // ── UI 状态 ─────────────────────────────────────────────────
   const [showSettings, setShowSettings] = useState(false)
@@ -119,7 +120,7 @@ function HomeContent() {
     await analyzeWithStreaming(
       provider,
       apiKey,
-      { symbols: selectedSymbols, intent, period, amount },
+      { symbols: selectedSymbols, intent, period, amount, locale },
       snap,
       (chunk) => setReport((prev) => prev + chunk),
       async (complete) => {
@@ -332,7 +333,7 @@ function AmbientBackground() {
         style={{ background: 'radial-gradient(circle, #5e6ad2 0%, transparent 70%)' }}
       />
       <div
-        className="absolute top-1/2 -right-32 w-80 h-80 rounded-full opacity-[0.04]"
+        className="absolute top-1/2 -right-32 w-80 h-80 rounded-full opacity-[0.04] hidden lg:block"
         style={{ background: 'radial-gradient(circle, #22c55e 0%, transparent 70%)' }}
       />
       <div

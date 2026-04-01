@@ -100,6 +100,7 @@ export interface InvestmentConfig {
   intent: InvestmentIntent
   period: InvestmentPeriod
   amount: number
+  locale?: string
 }
 
 export interface AppSettings {

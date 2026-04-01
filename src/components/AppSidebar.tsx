@@ -98,7 +98,7 @@ export function AppSidebar({
             tickers={tickers}
           />
 
-          <div className="h-px bg-white/[0.06]" />
+          <div className="h-px bg-border-dim" />
 
           <InvestmentConfig
             intent={intent}

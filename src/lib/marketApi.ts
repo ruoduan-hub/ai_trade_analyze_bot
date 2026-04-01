@@ -73,7 +73,9 @@ export async function fetchFearGreedIndex(): Promise<FearGreedData> {
   const cached = getCached<FearGreedData>('fear-greed')
   if (cached) return cached
 
-  const res = await fetch('/proxy/alternative/fng?limit=1')
+  // 使用独立 API 路由：alternative.me 对无尾部斜杠路径返回 301，
+  // Next.js rewrite 无法透传，由 /api/fng 直接请求正确 URL
+  const res = await fetch('/api/fng')
   if (!res.ok) throw new Error(`Fear & Greed API error: ${res.status}`)
   const data: FearGreedResponse = await res.json()
   const item = data.data[0]
@@ -149,13 +151,12 @@ export async function fetchLatestNews(limit = 6): Promise<NewsItem[]> {
 
 // ─── CoinGecko Global Market ──────────────────────────────────────────────────
 
-interface CoinGeckoGlobalResponse {
-  data: {
-    active_cryptocurrencies: number
-    total_market_cap: { usd: number }
-    market_cap_change_percentage_24h_usd: number
-    market_cap_percentage: { btc: number; eth: number }
-  }
+// CoinGecko 对服务器端代理请求返回 403，改用 CoinPaprika（已有代理且免费）
+interface CoinPaprikaGlobalResponse {
+  market_cap_usd: number
+  bitcoin_dominance_percentage: number
+  cryptocurrencies_number: number
+  market_cap_change_24h: number
 }
 
 export async function fetchGlobalMarket(): Promise<GlobalMarketData | null> {
@@ -163,16 +164,15 @@ export async function fetchGlobalMarket(): Promise<GlobalMarketData | null> {
   if (cached) return cached
 
   try {
-    const res = await fetch('/proxy/coingecko/api/v3/global')
+    const res = await fetch('/proxy/coinpaprika/v1/global')
     if (!res.ok) return null
-    const data: CoinGeckoGlobalResponse = await res.json()
-    const d = data.data
+    const data: CoinPaprikaGlobalResponse = await res.json()
     const result: GlobalMarketData = {
-      totalMarketCapUsd: d.total_market_cap.usd,
-      btcDominance: d.market_cap_percentage.btc,
-      ethDominance: d.market_cap_percentage.eth,
-      marketCapChange24hPercent: d.market_cap_change_percentage_24h_usd,
-      activeCryptocurrencies: d.active_cryptocurrencies,
+      totalMarketCapUsd: data.market_cap_usd,
+      btcDominance: data.bitcoin_dominance_percentage,
+      ethDominance: 0,  // CoinPaprika 不提供 ETH 主导率，降级为 0
+      marketCapChange24hPercent: data.market_cap_change_24h,
+      activeCryptocurrencies: data.cryptocurrencies_number,
     }
     setCached('global-market', result, TTL.globalMarket)
     return result

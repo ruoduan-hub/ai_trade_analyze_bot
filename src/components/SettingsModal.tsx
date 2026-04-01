@@ -6,23 +6,23 @@ import { Button } from './ui/Button'
 import { useLocale } from '@/contexts/LocaleContext'
 import type { AIProvider } from '@/types'
 
-const EXCHANGE_KEY_SESSION = 'exchange_api_key'
-const EXCHANGE_SECRET_SESSION = 'exchange_api_secret'
+const EXCHANGE_KEY_STORAGE = 'exchange_api_key'
+const EXCHANGE_SECRET_STORAGE = 'exchange_api_secret'
 
 export function loadExchangeCredentials(): { apiKey: string; apiSecret: string } {
   if (typeof window === 'undefined') return { apiKey: '', apiSecret: '' }
   return {
-    apiKey: sessionStorage.getItem(EXCHANGE_KEY_SESSION) ?? '',
-    apiSecret: sessionStorage.getItem(EXCHANGE_SECRET_SESSION) ?? '',
+    apiKey: localStorage.getItem(EXCHANGE_KEY_STORAGE) ?? '',
+    apiSecret: localStorage.getItem(EXCHANGE_SECRET_STORAGE) ?? '',
   }
 }
 
 function saveExchangeCredentials(apiKey: string, apiSecret: string) {
   if (typeof window === 'undefined') return
-  if (apiKey) sessionStorage.setItem(EXCHANGE_KEY_SESSION, apiKey)
-  else sessionStorage.removeItem(EXCHANGE_KEY_SESSION)
-  if (apiSecret) sessionStorage.setItem(EXCHANGE_SECRET_SESSION, apiSecret)
-  else sessionStorage.removeItem(EXCHANGE_SECRET_SESSION)
+  if (apiKey) localStorage.setItem(EXCHANGE_KEY_STORAGE, apiKey)
+  else localStorage.removeItem(EXCHANGE_KEY_STORAGE)
+  if (apiSecret) localStorage.setItem(EXCHANGE_SECRET_STORAGE, apiSecret)
+  else localStorage.removeItem(EXCHANGE_SECRET_STORAGE)
 }
 
 interface Props {
@@ -161,7 +161,7 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-white/[0.06]" />
+        <div className="h-px bg-border-dim" />
 
         {/* Exchange API credentials */}
         <div className="flex flex-col gap-3">

@@ -9,6 +9,13 @@
 
 import type { AIProvider, InvestmentConfig, MarketSnapshot } from '@/types'
 
+// ─── 语言 → AI 输出语言指令映射 ─────────────────────────────────
+const LOCALE_INSTRUCTION: Record<string, string> = {
+  zh: '**请用中文撰写整份分析报告**（包括所有标题、正文、建议和 JSON 中的 reasoning 字段）。',
+  en: '**Please write the entire analysis report in English** (including all headings, body text, recommendations, and the `reasoning` field in the JSON).',
+}
+const DEFAULT_LOCALE_INSTRUCTION = LOCALE_INSTRUCTION['zh']
+
 // ─── 投资风格 / 周期 的中文描述映射 ─────────────────────────────
 const INTENT_LABELS: Record<string, string> = {
   aggressive:   '进取型（高风险高回报，可接受较大回撤）',
@@ -126,7 +133,7 @@ ${newsSection}
 5. **仓位建议** — 根据投资金额（$${config.amount} USDT），给出各币种的建议仓位比例
 6. **关键价位** — 建议的入场价、止损价（Stop Loss）、止盈价（Take Profit）
 
-报告用中文撰写，使用 Markdown 格式，简洁专业。
+报告使用 Markdown 格式，简洁专业（具体语言见末尾"语言要求"章节）。
 
 ---
 
@@ -170,7 +177,13 @@ JSON 格式示例结构（值仅为占位，实际值由你的分析决定）：
 - 只包含你明确建议操作的币种，不操作的省略
 - type / side / price / amount / stopLoss / takeProfit 必须全部基于上方分析中给出的建议价位和仓位比例填写，不得使用任意示例数字
 - amount 须用 $${config.amount} USDT × 仓位比例 ÷ 入场价 计算
-- 所有价格单位为 USDT，数量单位为标的币`
+- 所有价格单位为 USDT，数量单位为标的币
+
+---
+
+## 语言要求
+
+${LOCALE_INSTRUCTION[config.locale ?? ''] ?? DEFAULT_LOCALE_INSTRUCTION}`
 }
 
 // ─── Provider 配置 ───────────────────────────────────────────

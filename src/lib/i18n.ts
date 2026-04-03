@@ -108,6 +108,13 @@ export const translations = {
       showSecret: '显示 Secret',
       glmPlaceholder: '请输入智谱 API Key',
     },
+    orderDataViewer: {
+      title: '订单数据',
+      toggleOpen: '展开查看原始数据',
+      toggleClose: '收起',
+      copyButton: '复制 JSON',
+      copied: '已复制',
+    },
     page: {
       fetchingMarket: '获取行情...',
       analyzing: 'AI 分析中...',
@@ -225,6 +232,13 @@ export const translations = {
       hideSecret: 'Hide Secret',
       showSecret: 'Show Secret',
       glmPlaceholder: 'Enter ZhipuAI API Key',
+    },
+    orderDataViewer: {
+      title: 'Order Data',
+      toggleOpen: 'View raw order data',
+      toggleClose: 'Collapse',
+      copyButton: 'Copy JSON',
+      copied: 'Copied',
     },
     page: {
       fetchingMarket: 'Fetching market...',

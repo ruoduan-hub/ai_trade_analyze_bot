@@ -13,11 +13,12 @@ import { CryptoSelector } from '@/components/CryptoSelector'
 import { InvestmentConfig } from '@/components/InvestmentConfig'
 import { MarketDataPanel } from '@/components/MarketDataPanel'
 import { AnalysisReport } from '@/components/AnalysisReport'
+import { OrderDataViewer } from '@/components/OrderDataViewer'
 import { OrderPreview } from '@/components/OrderPreview'
 import { Button } from '@/components/ui/Button'
 
 import { fetchAllMarketData } from '@/lib/marketApi'
-import { analyzeWithStreaming, parseOrdersFromReport } from '@/lib/claude'
+import { analyzeWithStreaming } from '@/lib/claude'
 import { saveAnalysis } from '@/lib/indexdb'
 
 import type {
@@ -123,9 +124,11 @@ function HomeContent() {
       { symbols: selectedSymbols, intent, period, amount, locale },
       snap,
       (chunk) => setReport((prev) => prev + chunk),
-      async (complete) => {
+      async (content, parsedOrders) => {
+        // 用 onComplete 返回的干净内容覆盖流式累积的 report，
+        // 确保不残留 ORDER_MARKER 分割点前后的片段。
+        setReport(content)
         setIsStreaming(false)
-        const parsedOrders = parseOrdersFromReport(complete)
         setOrders(parsedOrders)
         await saveAnalysis({
           id: recordId,
@@ -135,7 +138,7 @@ function HomeContent() {
           period,
           amount,
           marketSnapshot: snap,
-          report: complete,
+          report: content,
           orders: parsedOrders,
           executed: false,
         })
@@ -224,6 +227,11 @@ function HomeContent() {
             </div>
           )}
           <AnalysisReport report={report} isStreaming={isStreaming} error={analysisError} />
+          {orders.length > 0 && !isStreaming && (
+            <div className="animate-fade-in">
+              <OrderDataViewer orders={orders} />
+            </div>
+          )}
         </main>
 
         {/* 右侧订单面板（桌面端） */}
@@ -279,6 +287,11 @@ function HomeContent() {
                 </div>
               )}
               <AnalysisReport report={report} isStreaming={isStreaming} error={analysisError} />
+              {orders.length > 0 && !isStreaming && (
+                <div className="animate-fade-in">
+                  <OrderDataViewer orders={orders} />
+                </div>
+              )}
             </div>
           )}
 

@@ -151,6 +151,20 @@ interface MarkdownRendererProps {
 }
 
 /**
+ * 去除 AI 有时将整份报告包裹在代码围栏中的情况，例如：
+ *   ```markdown
+ *   # 标题
+ *   ...
+ *   ```
+ * 只处理最外层的围栏，内部代码块保持不变。
+ */
+function stripOuterCodeFence(text: string): string {
+  const trimmed = text.trim()
+  const match = trimmed.match(/^```(?:markdown|md)?\n([\s\S]*?)\n```$/i)
+  return match ? match[1] : text
+}
+
+/**
  * 统一的 Markdown 渲染组件
  * - full: 用于 AnalysisReport，包含完整的标题/表格/代码高亮样式
  * - compact: 用于 HistoryPanel 详情面板，精简版样式
@@ -162,6 +176,7 @@ export function MarkdownRenderer({
 }: MarkdownRendererProps) {
   const components = variant === 'full' ? fullComponents : compactComponents
   const plugins = variant === 'full' ? [rehypeHighlight] : []
+  const processedContent = stripOuterCodeFence(content)
 
   return (
     <div className={className}>
@@ -170,7 +185,7 @@ export function MarkdownRenderer({
         rehypePlugins={plugins}
         components={components}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   )

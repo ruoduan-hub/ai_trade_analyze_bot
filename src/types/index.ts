@@ -101,6 +101,8 @@ export interface InvestmentConfig {
   period: InvestmentPeriod
   amount: number
   locale?: string
+  /** 用户自定义投资倾向描述（可选，最大 500 字符） */
+  customTendency?: string
 }
 
 export interface AppSettings {

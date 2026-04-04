@@ -177,7 +177,7 @@ function buildPrompt(config: InvestmentConfig, snapshot: MarketSnapshot): string
 - **投资风格**: ${INTENT_LABELS[config.intent]}
 - **投资周期**: ${PERIOD_LABELS[config.period]}
 - **投资金额**: $${config.amount.toLocaleString()} USDT
-- **分析标的**: ${config.symbols.join(', ')}
+- **分析标的**: ${config.symbols.join(', ')}${config.customTendency ? `\n- **自定义投资偏好**: ${config.customTendency}` : ''}
 
 ## 实时市场数据（${new Date(snapshot.fetchedAt).toLocaleString('zh-CN')}）
 
@@ -212,6 +212,7 @@ ${newsSection}
 4. **风险评估** — 结合用户的投资风格，说明主要风险点；如果资金费率极高（>0.05%）或 OI 异常大，需额外提示强平风险
 5. **仓位建议** — 根据投资金额（$${config.amount} USDT），给出各币种的建议仓位比例
 6. **关键价位** — 建议的入场价、止损价（Stop Loss）、止盈价（Take Profit）
+7. **自定义投资偏好** - 如果有自定义投资偏好 “${config.customTendency}”则结合以上数据针对自定义投资偏好给出分析建议，没有则不用建议
 
 报告使用 Markdown 格式，简洁专业（具体语言见末尾"语言要求"章节）。**直接输出 Markdown 内容，不要使用代码围栏（\`\`\`markdown）包裹整份报告。**
 

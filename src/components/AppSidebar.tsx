@@ -21,9 +21,11 @@ interface AppSidebarProps {
   intent: InvestmentIntent
   period: InvestmentPeriod
   amount: number
+  customTendency?: string
   onIntentChange: (v: InvestmentIntent) => void
   onPeriodChange: (v: InvestmentPeriod) => void
   onAmountChange: (v: number) => void
+  onCustomTendencyChange: (v: string) => void
 
   /** 分析按钮状态 */
   isAnalyzing: boolean
@@ -49,9 +51,11 @@ export function AppSidebar({
   intent,
   period,
   amount,
+  customTendency,
   onIntentChange,
   onPeriodChange,
   onAmountChange,
+  onCustomTendencyChange,
   isAnalyzing,
   isFetchingMarket,
   canAnalyze,
@@ -104,9 +108,11 @@ export function AppSidebar({
             intent={intent}
             period={period}
             amount={amount}
+            customTendency={customTendency}
             onIntentChange={onIntentChange}
             onPeriodChange={onPeriodChange}
             onAmountChange={onAmountChange}
+            onCustomTendencyChange={onCustomTendencyChange}
           />
 
           <Button

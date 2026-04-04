@@ -48,6 +48,7 @@ function HomeContent() {
   const [intent, setIntent] = useState<InvestmentIntent>('steady')
   const [period, setPeriod] = useState<InvestmentPeriod>('mid')
   const [amount, setAmount] = useState<number>(1000)
+  const [customTendency, setCustomTendency] = useState<string>('')
 
   // ── AI Provider & API Key（sessionStorage 持久化） ──────────
   const { provider, apiKey, saveSession } = useSession()
@@ -121,7 +122,7 @@ function HomeContent() {
     await analyzeWithStreaming(
       provider,
       apiKey,
-      { symbols: selectedSymbols, intent, period, amount, locale },
+      { symbols: selectedSymbols, intent, period, amount, locale, customTendency: customTendency.trim() || undefined },
       snap,
       (chunk) => setReport((prev) => prev + chunk),
       async (content, parsedOrders) => {
@@ -149,7 +150,7 @@ function HomeContent() {
         setAnalysisError(err.message)
       },
     )
-  }, [selectedSymbols, intent, period, amount, apiKey, provider])
+  }, [selectedSymbols, intent, period, amount, apiKey, provider, customTendency])
 
   /** 下单执行后更新 IndexedDB 中的 executed 状态 */
   function handleOrdersExecuted(_results: OrderResult[]) {
@@ -208,9 +209,11 @@ function HomeContent() {
           intent={intent}
           period={period}
           amount={amount}
+          customTendency={customTendency}
           onIntentChange={setIntent}
           onPeriodChange={setPeriod}
           onAmountChange={setAmount}
+          onCustomTendencyChange={setCustomTendency}
           isAnalyzing={isAnalyzing}
           isFetchingMarket={isFetchingMarket}
           canAnalyze={canAnalyze}
@@ -253,9 +256,11 @@ function HomeContent() {
                 intent={intent}
                 period={period}
                 amount={amount}
+                customTendency={customTendency}
                 onIntentChange={setIntent}
                 onPeriodChange={setPeriod}
                 onAmountChange={setAmount}
+                onCustomTendencyChange={setCustomTendency}
               />
               <Button
                 variant="primary"

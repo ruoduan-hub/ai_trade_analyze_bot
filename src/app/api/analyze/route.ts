@@ -107,7 +107,7 @@ const SUBMIT_ORDERS_TOOL_OPENAI = {
 }
 
 // ─── 标记符：用于在流末尾分隔报告正文与订单 JSON ──────────────────
-export const ORDER_JSON_MARKER = '\n__ORDER_JSON__:'
+const ORDER_JSON_MARKER = '\n__ORDER_JSON__:'
 
 function buildPrompt(config: InvestmentConfig, snapshot: MarketSnapshot): string {
   const tickerSection = Object.entries(snapshot.tickers)

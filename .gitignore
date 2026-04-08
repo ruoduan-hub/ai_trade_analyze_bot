@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 markets.json
+# Electron 构建产物
+dist-electron/
+dist/
+release/

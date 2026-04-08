@@ -1,11 +1,67 @@
 {
   "name": "ai_trade",
   "version": "0.1.0",
+  "description": "加密货币投资智能顾问",
+  "author": "CryptoAdvisor",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "electron:dev": "concurrently \"next dev\" \"wait-on http://localhost:3000 && cross-env ELECTRON_DEV=1 electron .\"",
+    "electron:build": "next build --webpack && electron-builder",
+    "electron:build:mac": "next build --webpack && electron-builder --mac",
+    "electron:build:win": "next build --webpack && electron-builder --win",
+    "electron:build:mac:debug": "next build --webpack && electron-builder --mac --config.extraMetadata.debugMode=true"
+  },
+  "build": {
+    "appId": "com.aitrade.cryptoadvisor",
+    "productName": "CryptoAdvisor AI",
+    "copyright": "Copyright © 2026",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      ".next/**/*",
+      "public/**/*",
+      "node_modules/**/*",
+      "next.config.js",
+      "tsconfig.json",
+      "package.json"
+    ],
+    "asar": false,
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis"
+        },
+        {
+          "target": "portable"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": [
+        "zh_CN",
+        "en_US"
+      ]
+    }
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
@@ -27,7 +83,12 @@
     "@types/node": "^20.19.37",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "36.9.5",
+    "electron-builder": "^26.8.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.4"
   }
 }

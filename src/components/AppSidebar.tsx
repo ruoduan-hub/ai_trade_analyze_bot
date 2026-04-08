@@ -6,15 +6,17 @@ import { InvestmentConfig } from '@/components/InvestmentConfig'
 import { Button } from '@/components/ui/Button'
 import { useLocale } from '@/contexts/LocaleContext'
 import type { InvestmentIntent, InvestmentPeriod, TickerData } from '@/types'
+import type { MarketOption } from '@/app/api/markets/route'
 
 interface AppSidebarProps {
   /** 侧栏是否折叠 */
   collapsed: boolean
   onToggleCollapse: () => void
 
-  /** CryptoSelector 状态 */
+  /** CryptoSelector 状态（selectedSymbols 实为 market id 数组） */
   selectedSymbols: string[]
-  onSymbolsChange: (symbols: string[]) => void
+  onSymbolsChange: (ids: string[]) => void
+  onMarketsLoaded?: (markets: MarketOption[]) => void
   tickers: Record<string, TickerData>
 
   /** InvestmentConfig 状态 */
@@ -47,6 +49,7 @@ export function AppSidebar({
   onToggleCollapse,
   selectedSymbols,
   onSymbolsChange,
+  onMarketsLoaded,
   tickers,
   intent,
   period,
@@ -100,6 +103,7 @@ export function AppSidebar({
             selected={selectedSymbols}
             onChange={onSymbolsChange}
             tickers={tickers}
+            onMarketsLoaded={onMarketsLoaded}
           />
 
           <div className="h-px bg-border-dim" />

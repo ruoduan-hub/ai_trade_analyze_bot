@@ -2,9 +2,14 @@
 
 import { TrendingUp, TrendingDown, Activity, Newspaper } from 'lucide-react'
 import type { MarketSnapshot } from '@/types'
-import { SUPPORTED_ASSETS } from './CryptoSelector'
 import { Card } from './ui/Card'
 import { Badge } from './ui/Badge'
+
+/** 从 symbol 提取基础货币名称，兼容 'BTC-USDT' 和 'BTC/USDT:USDT' 两种格式 */
+function getBaseFromSymbol(symbol: string): string {
+  if (symbol.includes('/')) return symbol.split('/')[0] ?? symbol
+  return symbol.split('-')[0] ?? symbol
+}
 
 interface Props {
   snapshot: MarketSnapshot
@@ -40,22 +45,19 @@ export function MarketDataPanel({ snapshot, selectedSymbols }: Props) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {selectedSymbols.map((symbol) => {
           const ticker = tickers[symbol]
-          const asset = SUPPORTED_ASSETS.find((a) => a.symbol === symbol)
-          if (!ticker || !asset) return null
+          if (!ticker) return null
 
+          const base = getBaseFromSymbol(symbol)
           const isUp = ticker.change24h >= 0
           return (
             <Card key={symbol} className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span
-                    className="size-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                    style={{ backgroundColor: asset.color + '22', color: asset.color }}
-                  >
-                    {asset.shortName.slice(0, 1)}
+                  <span className="size-5 rounded-full flex items-center justify-center text-[9px] font-bold bg-accent/10 text-accent">
+                    {base.slice(0, 1)}
                   </span>
                   <span className="text-xs font-mono font-semibold text-foreground">
-                    {asset.shortName}
+                    {base}
                   </span>
                 </div>
                 <Badge variant={isUp ? 'success' : 'danger'}>

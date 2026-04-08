@@ -4,10 +4,11 @@ import type { CCXTOrder } from "@/types";
 
 export async function POST(req: NextRequest) {
   try {
-    const { orders, apiKey, secret } = (await req.json()) as {
+    const { orders, apiKey, secret, env } = (await req.json()) as {
       orders: CCXTOrder[];
       apiKey: string;
       secret: string;
+      env?: 'test' | 'production';
     };
 
     if (!apiKey || !secret) {
@@ -20,15 +21,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "orders required" }, { status: 400 });
     }
 
+    const apiUrl = env === 'production'
+      ? 'https://api.bydfi.com/api'
+      : 'https://api.bydtms.com/api'
+
     const exchange = new ccxt.bydfi({
       apiKey,
       secret,
       enableRateLimit: true,
-      verbose: true,
+      // verbose: true,
       urls: {
         api: {
-          public: "https://api.bydtms.com/api",
-          private: "https://api.bydtms.com/api",
+          public: apiUrl,
+          private: apiUrl,
         },
       },
     });
@@ -40,10 +45,13 @@ export async function POST(req: NextRequest) {
       const symbol = order.symbol.replace("/", "-");
 
       // 按交易所精度要求格式化数量，并确保不低于最小下单量
+      // 优先使用 MarketInfo.volumePrecision，fallback 到 CCXT amountToPrecision
       const market = exchange.market(symbol);
       const minAmount = market?.limits?.amount?.min ?? 1;
       const rawAmount = Math.max(order.amount, minAmount);
-      const amount = parseFloat(exchange.amountToPrecision(symbol, rawAmount));
+      const amount = order.volumePrecision != null
+        ? parseFloat(rawAmount.toFixed(order.volumePrecision))
+        : parseFloat(exchange.amountToPrecision(symbol, rawAmount));
 
       const placed = await exchange.createOrder(
         symbol,

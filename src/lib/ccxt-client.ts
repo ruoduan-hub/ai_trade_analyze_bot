@@ -1,4 +1,5 @@
 import type { CCXTOrder } from '@/types'
+import { loadTradeEnv } from './envConfig'
 
 export interface OrderResult {
   id: string
@@ -18,7 +19,7 @@ export async function placeOrders(
   const res = await fetch('/api/order', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ orders, apiKey, secret }),
+    body: JSON.stringify({ orders, apiKey, secret, env: loadTradeEnv() }),
   })
   const data = await res.json() as { results?: OrderResult[]; error?: string }
   if (!res.ok || data.error) {

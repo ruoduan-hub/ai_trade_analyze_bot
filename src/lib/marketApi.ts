@@ -7,6 +7,7 @@ import type {
   BtcOnchainData,
 } from '@/types'
 import { getCached, setCached } from '@/lib/apiCache'
+import { loadTradeEnv } from '@/lib/envConfig'
 
 // Per-source cache TTL (ms)
 const TTL = {
@@ -315,7 +316,7 @@ export async function fetchTickersViaCCXT(
     const res = await fetch('/api/market', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ symbols }),
+      body: JSON.stringify({ symbols, env: loadTradeEnv() }),
     })
     if (!res.ok) return {}
     const data = await res.json() as { tickers: Record<string, Partial<TickerData>> }

@@ -18,6 +18,7 @@ import { OrderPreview } from '@/components/OrderPreview'
 import { Button } from '@/components/ui/Button'
 
 import { fetchAllMarketData } from '@/lib/marketApi'
+import { loadTradeEnv, type TradeEnv } from '@/lib/envConfig'
 import { analyzeWithStreaming } from '@/lib/claude'
 import { saveAnalysis } from '@/lib/indexdb'
 
@@ -29,6 +30,7 @@ import type {
   AnalysisRecord,
 } from '@/types'
 import type { OrderResult } from '@/lib/ccxt-client'
+import type { MarketOption } from '@/app/api/markets/route'
 
 // 懒加载非首屏的重型组件，减少初始 bundle 体积
 const SettingsModal = lazy(() =>
@@ -44,13 +46,41 @@ export default function Home() {
 
 function HomeContent() {
   // ── 投资配置状态 ────────────────────────────────────────────
-  const [selectedSymbols, setSelectedSymbols] = useState<string[]>(['BTC/USDT'])
+  // selectedIds 存储 CCXT 交易所原生 market id（如 'BTC-USDT'）
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [intent, setIntent] = useState<InvestmentIntent>('steady')
   const [period, setPeriod] = useState<InvestmentPeriod>('mid')
   const [amount, setAmount] = useState<number>(1000)
   const [customTendency, setCustomTendency] = useState<string>('')
 
-  // ── AI Provider & API Key（sessionStorage 持久化） ──────────
+  // market id → CCXT symbol 映射（如 'BTC-USDT' → 'BTC/USDT'）
+  const marketMapRef = useRef<Map<string, string>>(new Map())
+  // symbol → volumePrecision 映射，用于下单时格式化数量精度
+  const volumePrecisionRef = useRef<Map<string, number>>(new Map())
+
+  /** CryptoSelector markets 加载完成后构建 ID→symbol 及 symbol→volumePrecision 映射 */
+  function handleMarketsLoaded(markets: MarketOption[]) {
+    const idMap = new Map<string, string>()
+    const precMap = new Map<string, number>()
+    for (const m of markets) {
+      idMap.set(m.id, m.symbol)
+      if (m.info?.volumePrecision != null) {
+        precMap.set(m.symbol, m.info.volumePrecision)
+      }
+    }
+    marketMapRef.current = idMap
+    volumePrecisionRef.current = precMap
+  }
+
+  /** 将 market id 数组转换为 CCXT symbol 数组，过滤掉未知 id */
+  function idsToSymbols(ids: string[]): string[] {
+    return ids.flatMap((id) => {
+      const sym = marketMapRef.current.get(id)
+      return sym ? [sym] : []
+    })
+  }
+
+  // AI Provider & API Key（sessionStorage 持久化）
   const { provider, apiKey, saveSession } = useSession()
 
   // ── 行情数据 ────────────────────────────────────────────────
@@ -61,10 +91,11 @@ function HomeContent() {
   // 选币器轻量价格（仅用于显示，不触发完整行情拉取）
   const [selectorTickers, setSelectorTickers] = useState<MarketSnapshot['tickers']>({})
 
+  // CryptoSelector 加载完成后，拉取热门合约的初始价格
+  // 通过 onMarketsLoaded 触发，避免硬编码 symbol 列表
   useEffect(() => {
-    fetchAllMarketData(['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT'])
-      .then((s) => setSelectorTickers(s.tickers))
-      .catch(() => {})
+    // 暂不预拉取，等用户选择后再按需拉取
+    // 原静态列表已移除，改由 CryptoSelector 动态展示
   }, [])
 
   // ── 分析结果状态 ────────────────────────────────────────────
@@ -87,14 +118,19 @@ function HomeContent() {
   const [analysisKey, setAnalysisKey] = useState(0)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileTab, setMobileTab] = useState<MobileTab>('config')
+  const [tradeEnv, setTradeEnv] = useState<TradeEnv>(() => loadTradeEnv())
 
   // ── 主分析流程 ──────────────────────────────────────────────
   const handleAnalyze = useCallback(async () => {
-    if (selectedSymbols.length === 0) return
+    if (selectedIds.length === 0) return
     if (!apiKey) {
       setShowSettings(true)
       return
     }
+
+    // 将 market id 转为 CCXT symbol，供 API 调用使用
+    const symbols = idsToSymbols(selectedIds)
+    if (symbols.length === 0) return
 
     setReport('')
     setOrders([])
@@ -105,7 +141,7 @@ function HomeContent() {
 
     let snap: MarketSnapshot
     try {
-      snap = await fetchAllMarketData(selectedSymbols)
+      snap = await fetchAllMarketData(symbols)
       setSnapshot(snap)
       setSelectorTickers((prev) => ({ ...prev, ...snap.tickers }))
     } catch (err) {
@@ -122,7 +158,7 @@ function HomeContent() {
     await analyzeWithStreaming(
       provider,
       apiKey,
-      { symbols: selectedSymbols, intent, period, amount, locale, customTendency: customTendency.trim() || undefined },
+      { symbols, intent, period, amount, locale, customTendency: customTendency.trim() || undefined },
       snap,
       (chunk) => setReport((prev) => prev + chunk),
       async (content, parsedOrders) => {
@@ -130,11 +166,16 @@ function HomeContent() {
         // 确保不残留 ORDER_MARKER 分割点前后的片段。
         setReport(content)
         setIsStreaming(false)
-        setOrders(parsedOrders)
+        // 根据 symbol 注入 volumePrecision，供下单时精确格式化数量
+        const enrichedOrders = parsedOrders.map((o) => ({
+          ...o,
+          volumePrecision: volumePrecisionRef.current.get(o.symbol) ?? o.volumePrecision,
+        }))
+        setOrders(enrichedOrders)
         await saveAnalysis({
           id: recordId,
           timestamp: Date.now(),
-          symbols: selectedSymbols,
+          symbols,
           intent,
           period,
           amount,
@@ -150,7 +191,8 @@ function HomeContent() {
         setAnalysisError(err.message)
       },
     )
-  }, [selectedSymbols, intent, period, amount, apiKey, provider, customTendency])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIds, intent, period, amount, apiKey, provider, customTendency])
 
   /** 下单执行后更新 IndexedDB 中的 executed 状态 */
   function handleOrdersExecuted(_results: OrderResult[]) {
@@ -164,7 +206,14 @@ function HomeContent() {
 
   /** 从历史记录恢复所有状态，自增 analysisKey 重置订单面板 */
   function handleReuseRecord(record: AnalysisRecord) {
-    setSelectedSymbols(record.symbols)
+    // record.symbols 是 CCXT symbol，需反查 market id
+    const reverseMap = new Map<string, string>()
+    marketMapRef.current.forEach((sym, id) => reverseMap.set(sym, id))
+    const ids = record.symbols.flatMap((sym) => {
+      const id = reverseMap.get(sym)
+      return id ? [id] : []
+    })
+    setSelectedIds(ids)
     setIntent(record.intent)
     setPeriod(record.period)
     setAmount(record.amount)
@@ -176,7 +225,9 @@ function HomeContent() {
   }
 
   const isAnalyzing = isFetchingMarket || isStreaming
-  const canAnalyze = selectedSymbols.length > 0 && !isAnalyzing
+  const canAnalyze = selectedIds.length > 0 && !isAnalyzing
+  // 用于 MarketDataPanel 等需要 CCXT symbol 的组件
+  const selectedSymbols = idsToSymbols(selectedIds)
 
   return (
     <div className="flex flex-col h-dvh bg-bg-deep overflow-hidden">
@@ -191,6 +242,7 @@ function HomeContent() {
         isStreaming={isStreaming}
         marketError={marketError}
         hasApiKey={Boolean(apiKey)}
+        tradeEnv={tradeEnv}
         onToggleTheme={toggleTheme}
         onOpenHistory={() => setShowHistory(true)}
         onOpenSettings={() => setShowSettings(true)}
@@ -203,8 +255,9 @@ function HomeContent() {
         <AppSidebar
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
-          selectedSymbols={selectedSymbols}
-          onSymbolsChange={setSelectedSymbols}
+          selectedSymbols={selectedIds}
+          onSymbolsChange={setSelectedIds}
+          onMarketsLoaded={handleMarketsLoaded}
           tickers={selectorTickers}
           intent={intent}
           period={period}
@@ -247,9 +300,10 @@ function HomeContent() {
           {mobileTab === 'config' && (
             <div className="p-4 flex flex-col gap-5">
               <CryptoSelector
-                selected={selectedSymbols}
-                onChange={setSelectedSymbols}
+                selected={selectedIds}
+                onChange={setSelectedIds}
                 tickers={selectorTickers}
+                onMarketsLoaded={handleMarketsLoaded}
               />
               <div className="h-px bg-white/[0.06]" />
               <InvestmentConfig
@@ -324,6 +378,7 @@ function HomeContent() {
             provider={provider}
             apiKey={apiKey}
             onSave={saveSession}
+            onEnvChange={setTradeEnv}
           />
         )}
         {showHistory && (

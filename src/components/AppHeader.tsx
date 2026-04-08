@@ -3,10 +3,12 @@
 import {
   Settings, Clock, Zap, RefreshCw, AlertCircle,
   Sun, Moon, ChevronDown, Globe, Check, MoreHorizontal, X,
+  FlaskConical,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import type { Theme } from '@/hooks/useTheme'
 import { useLocale } from '@/contexts/LocaleContext'
+import type { TradeEnv } from '@/lib/envConfig'
 
 interface AppHeaderProps {
   theme: Theme
@@ -15,6 +17,7 @@ interface AppHeaderProps {
   isStreaming: boolean
   marketError: string | null
   hasApiKey: boolean
+  tradeEnv?: TradeEnv
   onToggleTheme: () => void
   onOpenHistory: () => void
   onOpenSettings: () => void
@@ -450,6 +453,7 @@ export function AppHeader({
   isStreaming,
   marketError,
   hasApiKey,
+  tradeEnv,
   onToggleTheme,
   onOpenHistory,
   onOpenSettings,
@@ -490,6 +494,21 @@ export function AppHeader({
               {t.header.fetchError}
             </div>
           )}
+          {/* 环境徽章 */}
+          {tradeEnv && (
+            <button
+              onClick={onOpenSettings}
+              className={[
+                'size-9 rounded-xl flex items-center justify-center border transition-colors duration-200',
+                tradeEnv === 'test'
+                  ? 'bg-warning/10 border-warning/30 text-warning hover:bg-warning/15'
+                  : 'bg-success/10 border-success/30 text-success hover:bg-success/15',
+              ].join(' ')}
+              title={tradeEnv === 'test' ? t.settings.envTest : t.settings.envProduction}
+            >
+              <FlaskConical className="size-4" />
+            </button>
+          )}
           <LangDropdown locale={locale} setLocale={setLocale} t={t} />
           <button
             onClick={onOpenHistory}
@@ -527,6 +546,9 @@ export function AppHeader({
             <span className="size-2 rounded-full bg-danger flex-shrink-0" />
           )}
           {!hasApiKey && (
+            <span className="size-2 rounded-full bg-warning flex-shrink-0" />
+          )}
+          {tradeEnv === 'test' && hasApiKey && (
             <span className="size-2 rounded-full bg-warning flex-shrink-0" />
           )}
 

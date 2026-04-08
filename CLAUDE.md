@@ -203,6 +203,16 @@ interface AnalysisRecord {
 }
 ```
 
+#### markets-cache（IndexedDB Store）
+- 当前版本：`DB_VERSION = 4`，Store：`markets-cache`，keyPath：`key`（固定为 `'markets'`）
+- TTL：3 天；过期或 DB 升级时自动清空，下次访问重新从 `/api/markets` 拉取
+- 数据类型：`MarketOption[]`，每条记录包含：
+  - `id`：交易所原生 id（如 `'BTC-USDT'`）
+  - `baseId`：基础货币（如 `'BTC'`），用于显示
+  - `symbol`：统一格式（如 `'BTC/USDT'`），用于下单
+  - `info`：合约原始信息（类型 `MarketInfo`），含精度、手续费、杠杆等关键字段
+- **升级规则**：凡修改 `MarketOption` 结构，必须升级 `DB_VERSION`，并在 `upgrade()` 中删除并重建 `markets-cache` store
+
 ---
 
 ## 项目目录结构

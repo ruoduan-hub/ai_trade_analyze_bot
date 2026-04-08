@@ -3,12 +3,19 @@ import ccxt from 'ccxt'
 
 export async function POST(req: NextRequest) {
   try {
-    const { symbols } = await req.json() as { symbols: string[] }
+    const { symbols, env } = await req.json() as { symbols: string[]; env?: 'test' | 'production' }
     if (!Array.isArray(symbols) || symbols.length === 0) {
       return NextResponse.json({ error: 'symbols required' }, { status: 400 })
     }
 
-    const exchange = new ccxt.bydfi({ enableRateLimit: true })
+    const apiUrl = env === 'production'
+      ? 'https://api.bydfi.com/api'
+      : 'https://api.bydtms.com/api'
+
+    const exchange = new ccxt.bydfi({
+      enableRateLimit: true,
+      urls: { api: { public: apiUrl, private: apiUrl } },
+    })
     const results: Record<string, unknown> = {}
 
     await Promise.all(

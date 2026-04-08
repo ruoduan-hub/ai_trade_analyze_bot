@@ -75,6 +75,8 @@ export interface CCXTOrder {
   amount: number
   price?: number
   reasoning?: string
+  /** 来自 MarketInfo.volumePrecision，用于下单时格式化数量小数位 */
+  volumePrecision?: number
   params?: {
     stopLoss?: number
     takeProfit?: number

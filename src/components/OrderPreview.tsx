@@ -25,7 +25,6 @@ export function OrderPreview({ orders, onOrdersExecuted }: Props) {
   const [executeError, setExecuteError] = useState<string | null>(null)
   const [executed, setExecuted] = useState(false)
   const { t } = useLocale()
-
   const hasSavedCredentials = Boolean(saved.apiKey && saved.apiSecret)
 
   async function handleExecute() {

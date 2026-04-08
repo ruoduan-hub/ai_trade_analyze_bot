@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Key, Eye, EyeOff } from 'lucide-react'
+import { X, Key, Eye, EyeOff, FlaskConical, Globe, AlertTriangle } from 'lucide-react'
 import { Button } from './ui/Button'
 import { useLocale } from '@/contexts/LocaleContext'
 import type { AIProvider } from '@/types'
+import { loadTradeEnv, saveTradeEnv, type TradeEnv } from '@/lib/envConfig'
 
 const EXCHANGE_KEY_STORAGE = 'exchange_api_key'
 const EXCHANGE_SECRET_STORAGE = 'exchange_api_secret'
@@ -31,6 +32,7 @@ interface Props {
   provider: AIProvider
   apiKey: string
   onSave: (provider: AIProvider, key: string) => void
+  onEnvChange?: (env: TradeEnv) => void
 }
 
 const PROVIDERS: { value: AIProvider; label: string; placeholder: string; hint: string }[] = [
@@ -54,7 +56,7 @@ const PROVIDERS: { value: AIProvider; label: string; placeholder: string; hint: 
   },
 ]
 
-export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Props) {
+export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave, onEnvChange }: Props) {
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>(provider)
   const [input, setInput] = useState(apiKey)
   const [show, setShow] = useState(false)
@@ -64,6 +66,7 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
   const [exchangeKey, setExchangeKey] = useState(() => loadExchangeCredentials().apiKey)
   const [exchangeSecret, setExchangeSecret] = useState(() => loadExchangeCredentials().apiSecret)
   const [showExchangeSecret, setShowExchangeSecret] = useState(false)
+  const [tradeEnv, setTradeEnv] = useState<TradeEnv>(() => loadTradeEnv())
 
   if (!isOpen) return null
 
@@ -79,6 +82,8 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
   function handleSave() {
     onSave(selectedProvider, input.trim())
     saveExchangeCredentials(exchangeKey.trim(), exchangeSecret.trim())
+    saveTradeEnv(tradeEnv)
+    onEnvChange?.(tradeEnv)
     onClose()
   }
 
@@ -158,6 +163,52 @@ export function SettingsModal({ isOpen, onClose, provider, apiKey, onSave }: Pro
           <p className="text-[10px] text-muted font-mono leading-relaxed whitespace-pre-line">
             {t.settings.apiKeyHintPrefix}{current.hint}
           </p>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-border-dim" />
+
+        {/* 交易环境切换 */}
+        <div className="flex flex-col gap-2">
+          <span className="text-xs uppercase tracking-widest text-muted font-mono">
+            {t.settings.envTitle}
+          </span>
+          <div className="flex gap-2">
+            {/* 测试环境按钮 */}
+            <button
+              onClick={() => setTradeEnv('test')}
+              className={[
+                'flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all duration-200',
+                tradeEnv === 'test'
+                  ? 'bg-warning/10 border-warning/40 text-warning'
+                  : 'bg-surface border-themed text-muted hover:text-foreground hover:border-warning/20',
+              ].join(' ')}
+            >
+              <FlaskConical className="size-4" />
+              <span className="text-[11px] font-mono font-medium">{t.settings.envTest}</span>
+              <span className="text-[9px] font-mono opacity-60">{t.settings.envTestUrl}</span>
+            </button>
+            {/* 正式环境按钮 */}
+            <button
+              onClick={() => setTradeEnv('production')}
+              className={[
+                'flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all duration-200',
+                tradeEnv === 'production'
+                  ? 'bg-success/10 border-success/40 text-success'
+                  : 'bg-surface border-themed text-muted hover:text-foreground hover:border-success/20',
+              ].join(' ')}
+            >
+              <Globe className="size-4" />
+              <span className="text-[11px] font-mono font-medium">{t.settings.envProduction}</span>
+              <span className="text-[9px] font-mono opacity-60">{t.settings.envProductionUrl}</span>
+            </button>
+          </div>
+          {tradeEnv === 'test' && (
+            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-warning/8 border border-warning/20">
+              <AlertTriangle className="size-3 shrink-0 text-warning" />
+              <p className="text-[10px] font-mono text-warning/80">{t.settings.envWarning}</p>
+            </div>
+          )}
         </div>
 
         {/* Divider */}

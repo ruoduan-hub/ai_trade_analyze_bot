@@ -1,66 +1,159 @@
-# CryptoAdvisor AI
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=nextdotjs" alt="Next.js">
+  <img src="https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss" alt="Tailwind">
+  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License">
+</p>
 
-加密货币投资智能顾问。选择币种、设定投资风格，结合实时行情与 AI 分析生成投资报告，支持一键通过 CCXT 下单。
+<h1 align="center">CryptoAdvisor AI</h1>
 
-**纯前端项目**，无后端，无数据库。历史数据存储于 IndexedDB。
+<p align="center">
+  <em>AI-powered cryptocurrency investment advisor — market data, analysis reports, and one-click trading via CCXT.</em>
+  <br/>
+  <em>AI 驱动的加密货币投资顾问 — 行情数据、分析报告、一键下单。</em>
+</p>
 
 ---
 
-## 快速开始
+## Table of Contents / 目录
+
+- [Features / 功能](#features--功能)
+- [Quick Start / 快速开始](#quick-start--快速开始)
+- [Architecture / 架构](#architecture--架构)
+- [Data Sources / 数据源](#data-sources--数据源)
+- [Project Structure / 项目结构](#项目结构)
+- [Tech Stack / 技术栈](#tech-stack--技术栈)
+- [Security / 安全](#security--安全)
+- [Caching / 缓存策略](#caching--缓存策略)
+- [Internationalization / 国际化](#internationalization--国际化)
+- [Desktop App / 桌面应用](#desktop-app--桌面应用)
+- [License / 许可](#license--许可)
+
+---
+
+## Features / 功能
+
+- **Multi-source Market Data** — Real-time prices, funding rates, open interest, fear & greed index, on-chain data, and news from 8 public APIs.
+- **AI Analysis** — Streaming SSE report powered by Claude, covering technicals, fundamentals, sentiment, and risk.
+- **One-click Trading** — Generates CCXT-compatible order JSON; confirm and execute directly via your exchange API key.
+- **Bilingual** — English / Chinese UI with zero-hydration-flicker language switching.
+- **History & Replay** — Every analysis saved locally (IndexedDB). Replay any past report and re-submit orders.
+- **Desktop App** — Packaged via Electron for macOS and Windows.
+
+> **多源行情数据** — 8 个公共 API 实时聚合价格、资金费率、未平仓合约、恐惧贪婪指数、链上数据及新闻。
+> **AI 投资分析** — Claude 驱动的流式分析报告，涵盖技术面、基本面、情绪面和风险提示。
+> **一键下单** — 生成 CCXT 标准订单 JSON，确认后通过交易所 API 执行。
+> **双语界面** — 中英文无缝切换，零 hydration 闪烁。
+> **历史回放** — 每次分析自动保存至 IndexedDB，支持回看报告、再次下单。
+> **桌面应用** — 基于 Electron 打包，支持 macOS 和 Windows。
+
+---
+
+## Quick Start / 快速开始
+
+### Prerequisites / 前置条件
+
+- Node.js 18+
+- An Anthropic API key (or compatible endpoint)
+
+### Install / 安装
 
 ```bash
-# 安装依赖
+git clone https://github.com/<your-org>/cryptoadvisor-ai.git
+cd cryptoadvisor-ai
+
 npm install
-
-# 配置环境变量（复制后填入 AI API Key）
 cp .env.example .env.local
+# Edit .env.local and set CACHE_TIME if needed (default: 15 min)
+```
 
-# 启动开发服务器
-npm run dev
+### AI API Key / AI 密钥
 
-# 生产构建
-npm run build
+The AI API key is **not** set via environment variable. Instead, users enter it in the Settings panel (gear icon in the header). The key is stored in `sessionStorage` only — it is never persisted to disk, localStorage, or IndexedDB.
 
-# 类型检查
-npm run type-check
+> AI 密钥**不**通过环境变量配置，用户在设置面板中输入，仅保存在 `sessionStorage` 中，关闭浏览器标签即清除。
+
+### Dev / 开发
+
+```bash
+npm run dev          # Start dev server
+npm run build        # Production build
+npm run type-check   # TypeScript check
+```
+
+### Desktop App / 桌面应用
+
+```bash
+npm run electron:dev          # Dev mode with hot reload
+npm run electron:build:mac    # Build macOS .dmg
+npm run electron:build:win    # Build Windows installer
 ```
 
 ---
 
-## 环境变量
+## Architecture / 架构
 
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `CACHE_TIME` | 否 | 公共 API 默认缓存时长（分钟），缺省 `15` |
-
-> AI API Key 在运行时由用户在设置面板中输入，存于 `sessionStorage`，不写入环境变量。
+```
+Browser / Electron
+    │
+    ├─ React 19 (App Router)
+    │   ├─ CryptoSelector      — Search & select trading pairs
+    │   ├─ InvestmentConfig     — Risk profile / timeframe / amount
+    │   ├─ MarketDataPanel      — Real-time dashboard
+    │   ├─ AnalysisReport       — Streaming AI report (Markdown)
+    │   ├─ OrderPreview         — CCXT JSON + confirm + execute
+    │   └─ HistoryPanel         — IndexedDB records
+    │
+    ├─ Next.js API Routes
+    │   ├─ /api/analyze         — AI streaming (SSE)
+    │   ├─ /api/market          — CCXT ticker proxy
+    │   ├─ /api/markets         — Available trading pairs
+    │   └─ /api/order           — Order execution
+    │
+    ├─ External (via rewrites)
+    │   ├─ /proxy/coinpaprika   — Market cap & supplementary prices
+    │   ├─ /proxy/alternative   — Fear & Greed Index
+    │   ├─ /proxy/llama         — DeFi TVL
+    │   ├─ /proxy/coindesk      — Market news
+    │   ├─ /proxy/coingecko     — Global market overview
+    │   ├─ /proxy/binfutures    — Funding rate & open interest
+    │   └─ /proxy/mempool       — BTC on-chain mempool
+    │
+    └─ Storage
+        ├─ IndexedDB            — Analysis history, markets cache
+        ├─ sessionStorage       — Exchange API credentials (ephemeral)
+        └─ localStorage         — Theme & locale preferences
+```
 
 ---
 
-## 公共 API 数据源
+## Data Sources / 数据源
 
-所有外部 API 均**无需 API Key**，通过 Next.js `rewrites` 代理到 `/proxy/*` 避免 CORS 限制。
+All external APIs are **public** — no API key required. CORS is handled by Next.js `rewrites`.
 
-### 数据源列表
+> 所有外部 API 均为**公开接口**，无需 API Key，通过 Next.js `rewrites` 代理解决 CORS。
 
-| 数据源 | 提供数据 | 代理前缀 | 缓存 TTL | 原始 Base URL |
-|--------|---------|---------|---------|--------------|
-| **CCXT / BYDFi** | 实时价格、24h 高低、成交量 | `/api/market`（API Route） | 1 min | — |
-| **CoinPaprika** | 币种市值、补充价格数据 | `/proxy/coinpaprika` | 5 min | `https://api.coinpaprika.com` |
-| **Alternative.me** | 恐惧贪婪指数（0–100） | `/proxy/alternative` | 15 min | `https://api.alternative.me` |
-| **DeFiLlama** | 以太坊 DeFi 总 TVL | `/proxy/llama` | 15 min | `https://api.llama.fi` |
-| **CoinDesk** | 最新加密市场新闻 | `/proxy/coindesk` | 10 min | `https://data-api.coindesk.com` |
-| **CoinGecko** | 全球总市值、BTC/ETH 主导率、24h 变化 | `/proxy/coingecko` | 5 min | `https://api.coingecko.com` |
-| **Binance Futures** | 资金费率（8h）、未平仓合约（OI） | `/proxy/binfutures` | 1 min | `https://fapi.binance.com` |
-| **mempool.space** | BTC mempool 待确认交易数、推荐 Gas 费率 | `/proxy/mempool` | 2 min | `https://mempool.space` |
+| Source / 数据源 | Data / 提供数据 | Proxy / 代理前缀 | Cache TTL |
+|-----------------|----------------|-----------------|-----------|
+| **CCXT (Exchange)** | Real-time tickers, 24h OHLC, volume | `/api/market` | 1 min |
+| **CoinPaprika** | Market cap, supplementary prices | `/proxy/coinpaprika` | 5 min |
+| **Alternative.me** | Fear & Greed Index (0–100) | `/proxy/alternative` | 15 min |
+| **DeFiLlama** | Ethereum DeFi TVL | `/proxy/llama` | 15 min |
+| **CoinDesk** | Crypto market news | `/proxy/coindesk` | 10 min |
+| **CoinGecko** | Global market cap, BTC/ETH dominance | `/proxy/coingecko` | 5 min |
+| **Binance Futures** | Funding rate (8h), open interest | `/proxy/binfutures` | 1 min |
+| **mempool.space** | BTC mempool, recommended fees | `/proxy/mempool` | 2 min |
 
-### 各数据源使用的端点
+### API Endpoints / 端点详情
 
-#### CCXT / BYDFi（通过 `/api/market` API Route）
+<details>
+<summary>Click to expand / 点击展开</summary>
+
+#### CCXT Exchange (via `/api/market`)
 ```
 POST /api/market
 Body: { symbols: string[] }
-→ 实时 ticker：price, change24h, volume24h, high24h, low24h
+→ Ticker: price, change24h, volume24h, high24h, low24h
 ```
 
 #### CoinPaprika
@@ -72,13 +165,13 @@ GET /proxy/coinpaprika/v1/tickers/{coin-id}
 #### Alternative.me
 ```
 GET /proxy/alternative/fng?limit=1
-→ data[0]: value (0–100), value_classification, timestamp
+→ data[0]: value, value_classification, timestamp
 ```
 
 #### DeFiLlama
 ```
 GET /proxy/llama/v2/historicalChainTvl/ethereum
-→ 最后一条: { tvl, date }
+→ Last entry: { tvl, date }
 ```
 
 #### CoinDesk
@@ -94,96 +187,162 @@ GET /proxy/coingecko/api/v3/global
         market_cap_change_percentage_24h_usd, active_cryptocurrencies
 ```
 
-#### Binance Futures（永续合约）
+#### Binance Futures
 ```
-GET /proxy/binfutures/fapi/v1/premiumIndex?symbol={BTCUSDT}
-→ lastFundingRate  （资金费率，8h 结算周期）
+GET /proxy/binfutures/fapi/v1/premiumIndex?symbol={symbol}
+→ lastFundingRate
 
-GET /proxy/binfutures/fapi/v1/openInterest?symbol={BTCUSDT}
-→ openInterest（币种单位，需乘以价格换算为 USD）
+GET /proxy/binfutures/fapi/v1/openInterest?symbol={symbol}
+→ openInterest
 ```
 
-#### mempool.space（BTC 链上）
+#### mempool.space
 ```
 GET /proxy/mempool/api/v1/fees/recommended
-→ fastestFee, halfHourFee, hourFee（单位：sat/vB）
+→ fastestFee, halfHourFee, hourFee (sat/vB)
 
 GET /proxy/mempool/api/mempool
-→ count（待确认交易数）, vsize, total_fee
+→ count, vsize, total_fee
 ```
 
----
+</details>
 
+### CCXT Coverage / CCXT 可替代性
 
-### 理论上可以用 CCXT 替代的（2 个）
-
-| 当前方案 | CCXT 替代方法 | 说明 |
-|---------|-------------|------|
-| Binance Futures → 资金费率 | `exchange.fetchFundingRate(symbol)` | 需 futures 交易所支持 |
-| Binance Futures → 未平仓合约 OI | `exchange.fetchOpenInterest(symbol)` | 同上 |
-
-实际未替换的原因：BYDFi 不一定实现了这两个方法；若切换到 Binance 实例还需额外走 `/api/market` 路由（避免 bundle 问题），反而比直接代理 Binance 公开接口更复杂。
-
-### 无法用 CCXT 替代的（6 个）
-
-| 数据源 | 原因 |
-|--------|------|
-| **Alternative.me 恐惧贪婪指数** | 第三方计算的情绪指数，非交易所数据 |
-| **DeFiLlama TVL** | 链上 DeFi 协议数据，需跨协议聚合 |
-| **CoinDesk 新闻** | 媒体资讯，与交易所无关 |
-| **CoinGecko 全球市值 / BTC 主导率** | 需聚合全市场（数千个交易所），单一交易所无法提供 |
-| **CoinPaprika 市值** | 同上，需全市场聚合 |
-| **mempool.space 链上数据** | Bitcoin 网络层数据，交易所不提供 |
+| Status | Data | Notes |
+|--------|------|-------|
+| Replaceable via CCXT | Funding rate, Open interest | `exchange.fetchFundingRate()` / `exchange.fetchOpenInterest()` |
+| Not replaceable | Fear & Greed Index, DeFi TVL, News, Global market cap, BTC dominance, CoinPaprika market cap, Mempool on-chain data | Third-party computed or multi-source aggregated |
 
 ---
 
-## 缓存机制
-
-缓存实现在 `src/lib/apiCache.ts`，使用 module-level `Map` 存储，TTL 到期自动失效。
-
-- **浏览器端**：缓存在当前 tab session 内有效
-- **服务端**：缓存在 Node.js 进程生命周期内跨请求复用
-- **默认 TTL**：`CACHE_TIME` 环境变量（分钟），缺省 15 min
-
-各数据源 TTL 见上表。调整全局默认值只需修改 `.env.local` 中的 `CACHE_TIME`。
-
----
-
-## 技术栈
-
-| 层级 | 技术 |
-|------|------|
-| 框架 | Next.js 14+ (App Router) |
-| 语言 | TypeScript（严格模式） |
-| 样式 | Tailwind CSS v3 |
-| 交易所 | CCXT (`bydfi`) |
-| 本地存储 | IndexedDB（via `idb`） |
-| 图标 | Lucide React |
-| 字体 | Orbitron / JetBrains Mono |
-
----
-
-## 项目结构
+## Project Structure / 项目结构
 
 ```
 src/
 ├── app/
 │   ├── api/
-│   │   ├── analyze/route.ts   # AI 分析（SSE 流式）
-│   │   ├── market/route.ts    # CCXT 行情代理
-│   │   └── order/route.ts     # 下单执行
-│   ├── layout.tsx
-│   ├── page.tsx               # 主页面
-│   └── globals.css
-├── components/                # UI 组件
+│   │   ├── analyze/route.ts    # AI analysis (SSE streaming)
+│   │   ├── market/route.ts     # CCXT ticker proxy
+│   │   ├── markets/route.ts    # Available trading pairs
+│   │   └── order/route.ts      # Order execution
+│   ├── layout.tsx              # Root layout, fonts, theme
+│   ├── page.tsx                # Main SPA page
+│   └── globals.css             # Design tokens + global styles
+├── components/
+│   ├── CryptoSelector/         # Trading pair search & selection
+│   ├── InvestmentConfig/       # Risk profile & parameters
+│   ├── MarketDataPanel/        # Real-time data dashboard
+│   ├── AnalysisReport/         # Streaming AI report renderer
+│   ├── OrderPreview/           # CCXT JSON preview & execution
+│   ├── HistoryPanel/           # IndexedDB history viewer
+│   └── ui/                     # Base components (Button, Card, Badge)
 ├── lib/
-│   ├── apiCache.ts            # 通用 TTL 缓存
-│   ├── marketApi.ts           # 所有公共 API 封装（含缓存）
-│   ├── indexdb.ts             # IndexedDB 历史记录
-│   └── i18n.ts                # 中英文翻译字典
+│   ├── apiCache.ts             # TTL cache (module-level Map)
+│   ├── marketApi.ts            # Public API wrappers with caching
+│   ├── indexdb.ts              # IndexedDB read/write (via idb)
+│   ├── ccxt.ts                 # CCXT client initialization
+│   ├── i18n.ts                 # EN/ZH translation dictionary
+│   └── envConfig.ts            # Environment configuration
 ├── contexts/
-│   └── LocaleContext.tsx      # 语言切换 Context
+│   └── LocaleContext.tsx       # Locale context & cookie sync
 ├── hooks/
+│   ├── useMarketData.ts
+│   ├── useAnalysis.ts
+│   └── useHistory.ts
 └── types/
-    └── index.ts               # 全局 TypeScript 类型
+    └── index.ts                # Global TypeScript definitions
 ```
+
+---
+
+## Tech Stack / 技术栈
+
+| Layer / 层级 | Technology / 技术 |
+|-------------|------------------|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript (strict) |
+| Styling | Tailwind CSS 4 |
+| AI | Anthropic SDK (Claude) |
+| Exchange | CCXT (multi-exchange support) |
+| Local Storage | IndexedDB (via `idb`) |
+| Desktop | Electron + electron-builder |
+| Icons | Lucide React |
+| Fonts | Orbitron / JetBrains Mono |
+
+---
+
+## Security / 安全
+
+- **Exchange API keys** are stored in `sessionStorage` only — cleared when the tab is closed. Never written to localStorage, IndexedDB, or any persistent storage.
+- **AI API key** is stored in `sessionStorage` only — same ephemeral model.
+- **All external API calls** go through Next.js `rewrites` to avoid exposing the client's IP to third-party services.
+- **AI report rendering** uses `react-markdown` — no `dangerouslySetInnerHTML`.
+- **No server-side database** — all user data lives in the browser.
+
+> **交易所 API Key** 仅存储在 `sessionStorage` 中，关闭标签页即清除，绝不持久化。
+> **AI 密钥**同样仅存储于 `sessionStorage`。
+> **外部 API 调用**通过 Next.js `rewrites` 代理，避免客户端 IP 暴露。
+> **AI 报告渲染**使用 `react-markdown`，禁止 `dangerouslySetInnerHTML`。
+> **无服务端数据库** — 所有用户数据仅存在于浏览器端。
+
+---
+
+## Caching / 缓存策略
+
+Cache is implemented in `src/lib/apiCache.ts` as a module-level `Map<string, { data, expiresAt }>`.
+
+- **Browser**: Cache lives for the tab session lifetime.
+- **Server**: Cache is shared across requests within the Node.js process lifetime.
+- **Default TTL**: `CACHE_TIME` env var (minutes), falls back to 15 min.
+
+| Tier / 级别 | TTL | Data Type / 数据类型 |
+|------------|-----|-------------------|
+| High-frequency / 高频 | 1 min | Real-time prices, funding rates, OI |
+| Mid-frequency / 中频 | 2–5 min | BTC on-chain, global market overview |
+| Low-frequency / 低频 | 10–15 min | News, Fear & Greed Index, DeFi TVL |
+
+> 缓存实现在 `src/lib/apiCache.ts`，使用 module-level `Map` 存储，TTL 到期自动失效。
+> 浏览器端：缓存在当前 tab session 内有效。服务端：缓存在 Node.js 进程生命周期内跨请求复用。
+
+---
+
+## Internationalization / 国际化
+
+English and Chinese are fully supported. The language switch lives in the header.
+
+- **Translation dictionary**: `src/lib/i18n.ts` — all strings for both locales.
+- **Server-side detection**: Locale is stored in a cookie and read by `layout.tsx` during SSR, ensuring **zero hydration flicker**.
+- **Adding strings**: Add to both `zh` and `en` objects in `i18n.ts` — TypeScript enforces structural parity.
+
+> 完整支持英文和中文，切换按钮位于 Header 右侧。翻译字典位于 `src/lib/i18n.ts`。
+> 语言偏好通过 Cookie + 服务端读取实现 SSR 时即输出正确语言，**零 hydration 闪烁**。
+
+---
+
+## Desktop App / 桌面应用
+
+CryptoAdvisor AI can be packaged as a standalone desktop application using Electron.
+
+```bash
+# Development (hot reload)
+npm run electron:dev
+
+# Build macOS (.dmg, universal: x64 + arm64)
+npm run electron:build:mac
+
+# Build Windows (.exe installer + portable)
+npm run electron:build:win
+```
+
+---
+
+## License / 许可
+
+MIT License — see [LICENSE](./LICENSE) for details.
+
+---
+
+<p align="center">
+  <sub>Built with ❤️ for the crypto community. / 为加密社区打造。</sub>
+</p>

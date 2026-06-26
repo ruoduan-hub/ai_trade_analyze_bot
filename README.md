@@ -1,79 +1,61 @@
+<div align="center">
+  <h1>CryptoAdvisor AI</h1>
+
+  <p><strong>AI-powered cryptocurrency investment advisor — market data, analysis reports, and one-click trading via CCXT.</strong></p>
+
+  <p>
+    <a href="https://github.com/ruoduan-hub/cryptoadvisor-ai/releases"><img src="https://img.shields.io/github/v/release/ruoduan-hub/cryptoadvisor-ai?color=111827&label=version" alt="Version"></a>
+    <a href="https://github.com/ruoduan-hub/cryptoadvisor-ai/releases"><img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg" alt="Platform"></a>
+    <img src="https://img.shields.io/badge/Next.js-16-black?style=flat&logo=nextdotjs" alt="Next.js">
+    <img src="https://img.shields.io/badge/TypeScript-5-blue?style=flat&logo=typescript" alt="TypeScript">
+    <img src="https://img.shields.io/badge/Tailwind-4-06B6D4?style=flat&logo=tailwindcss" alt="Tailwind">
+    <a href="./LICENSE"><img src="https://img.shields.io/github/license/ruoduan-hub/cryptoadvisor-ai?color=111827" alt="License"></a>
+  </p>
+
+  <p>
+    English · <a href="./README.zh-CN.md">简体中文</a>
+  </p>
+</div>
+
+CryptoAdvisor AI is a **pure frontend** crypto investment tool. Select coins, configure your risk profile, pull live market data from 8 public APIs, and get a streaming AI analysis report — complete with entry, stop-loss, and take-profit levels. When you're ready, execute the trade in one click through a CCXT-compatible exchange.
+
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=nextdotjs" alt="Next.js">
-  <img src="https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss" alt="Tailwind">
-  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License">
+  <img src="./docs/table-iMac.png" alt="CryptoAdvisor AI — Desktop" width="860">
 </p>
 
-<h1 align="center">CryptoAdvisor AI</h1>
-
 <p align="center">
-  <em>AI-powered cryptocurrency investment advisor — market data, analysis reports, and one-click trading via CCXT.</em>
-  <br/>
-  <em>AI 驱动的加密货币投资顾问 — 行情数据、分析报告、一键下单。</em>
+  <img src="./docs/mobile-iPhone%20X.png" alt="CryptoAdvisor AI — Mobile" width="320">
 </p>
 
----
+## Features
 
-## Table of Contents / 目录
+- **Multi-source Market Data** — Real-time prices, funding rates, open interest, Fear & Greed Index, on-chain data, and news from 8 public APIs.
+- **Streaming AI Analysis** — SSE-powered report covering technicals, fundamentals, sentiment, and risk. Configurable risk profile and investment horizon.
+- **One-click Trading** — AI generates CCXT-compatible order JSON with stop-loss and take-profit. Review, confirm, execute.
+- **History & Replay** — Every analysis saved to IndexedDB. Replay past reports and re-submit orders.
+- **Desktop App** — Packaged via Electron for macOS (universal) and Windows (x64).
+- **Bilingual UI** — English and Simplified Chinese with zero-hydration-flicker language switching.
+- **No Backend, No Database** — All data lives in the browser. Exchange credentials never leave your machine.
 
-- [Features / 功能](#features--功能)
-- [Quick Start / 快速开始](#quick-start--快速开始)
-- [Architecture / 架构](#architecture--架构)
-- [Data Sources / 数据源](#data-sources--数据源)
-- [Project Structure / 项目结构](#项目结构)
-- [Tech Stack / 技术栈](#tech-stack--技术栈)
-- [Security / 安全](#security--安全)
-- [Caching / 缓存策略](#caching--缓存策略)
-- [Internationalization / 国际化](#internationalization--国际化)
-- [Desktop App / 桌面应用](#desktop-app--桌面应用)
-- [License / 许可](#license--许可)
+## Quick Start
 
----
-
-## Features / 功能
-
-- **Multi-source Market Data** — Real-time prices, funding rates, open interest, fear & greed index, on-chain data, and news from 8 public APIs.
-- **AI Analysis** — Streaming SSE report powered by Claude, covering technicals, fundamentals, sentiment, and risk.
-- **One-click Trading** — Generates CCXT-compatible order JSON; confirm and execute directly via your exchange API key.
-- **Bilingual** — English / Chinese UI with zero-hydration-flicker language switching.
-- **History & Replay** — Every analysis saved locally (IndexedDB). Replay any past report and re-submit orders.
-- **Desktop App** — Packaged via Electron for macOS and Windows.
-
-> **多源行情数据** — 8 个公共 API 实时聚合价格、资金费率、未平仓合约、恐惧贪婪指数、链上数据及新闻。
-> **AI 投资分析** — Claude 驱动的流式分析报告，涵盖技术面、基本面、情绪面和风险提示。
-> **一键下单** — 生成 CCXT 标准订单 JSON，确认后通过交易所 API 执行。
-> **双语界面** — 中英文无缝切换，零 hydration 闪烁。
-> **历史回放** — 每次分析自动保存至 IndexedDB，支持回看报告、再次下单。
-> **桌面应用** — 基于 Electron 打包，支持 macOS 和 Windows。
-
----
-
-## Quick Start / 快速开始
-
-### Prerequisites / 前置条件
+### Prerequisites
 
 - Node.js 18+
 - An Anthropic API key (or compatible endpoint)
 
-### Install / 安装
+### Install
 
 ```bash
-git clone https://github.com/<your-org>/cryptoadvisor-ai.git
+git clone https://github.com/ruoduan-hub/cryptoadvisor-ai.git
 cd cryptoadvisor-ai
 
 npm install
 cp .env.example .env.local
-# Edit .env.local and set CACHE_TIME if needed (default: 15 min)
+# CACHE_TIME is optional; defaults to 15 (minutes)
 ```
 
-### AI API Key / AI 密钥
-
-The AI API key is **not** set via environment variable. Instead, users enter it in the Settings panel (gear icon in the header). The key is stored in `sessionStorage` only — it is never persisted to disk, localStorage, or IndexedDB.
-
-> AI 密钥**不**通过环境变量配置，用户在设置面板中输入，仅保存在 `sessionStorage` 中，关闭浏览器标签即清除。
-
-### Dev / 开发
+### Dev
 
 ```bash
 npm run dev          # Start dev server
@@ -81,17 +63,19 @@ npm run build        # Production build
 npm run type-check   # TypeScript check
 ```
 
-### Desktop App / 桌面应用
+### Desktop App
 
 ```bash
 npm run electron:dev          # Dev mode with hot reload
-npm run electron:build:mac    # Build macOS .dmg
+npm run electron:build:mac    # Build macOS .dmg (universal)
 npm run electron:build:win    # Build Windows installer
 ```
 
----
+## AI API Key
 
-## Architecture / 架构
+The AI API key is **not** set via environment variable. Users enter it in the Settings panel. The key is stored in `sessionStorage` only — cleared when the tab is closed, never persisted to disk or localStorage.
+
+## Architecture
 
 ```
 Browser / Electron
@@ -99,9 +83,9 @@ Browser / Electron
     ├─ React 19 (App Router)
     │   ├─ CryptoSelector      — Search & select trading pairs
     │   ├─ InvestmentConfig     — Risk profile / timeframe / amount
-    │   ├─ MarketDataPanel      — Real-time dashboard
+    │   ├─ MarketDataPanel      — Real-time data dashboard
     │   ├─ AnalysisReport       — Streaming AI report (Markdown)
-    │   ├─ OrderPreview         — CCXT JSON + confirm + execute
+    │   ├─ OrderPreview         — CCXT JSON preview + execution
     │   └─ HistoryPanel         — IndexedDB records
     │
     ├─ Next.js API Routes
@@ -111,7 +95,7 @@ Browser / Electron
     │   └─ /api/order           — Order execution
     │
     ├─ External (via rewrites)
-    │   ├─ /proxy/coinpaprika   — Market cap & supplementary prices
+    │   ├─ /proxy/coinpaprika   — Market cap & prices
     │   ├─ /proxy/alternative   — Fear & Greed Index
     │   ├─ /proxy/llama         — DeFi TVL
     │   ├─ /proxy/coindesk      — Market news
@@ -125,16 +109,12 @@ Browser / Electron
         └─ localStorage         — Theme & locale preferences
 ```
 
----
-
-## Data Sources / 数据源
+## Data Sources
 
 All external APIs are **public** — no API key required. CORS is handled by Next.js `rewrites`.
 
-> 所有外部 API 均为**公开接口**，无需 API Key，通过 Next.js `rewrites` 代理解决 CORS。
-
-| Source / 数据源 | Data / 提供数据 | Proxy / 代理前缀 | Cache TTL |
-|-----------------|----------------|-----------------|-----------|
+| Source | Data | Proxy | Cache TTL |
+| --- | --- | --- | --- |
 | **CCXT (Exchange)** | Real-time tickers, 24h OHLC, volume | `/api/market` | 1 min |
 | **CoinPaprika** | Market cap, supplementary prices | `/proxy/coinpaprika` | 5 min |
 | **Alternative.me** | Fear & Greed Index (0–100) | `/proxy/alternative` | 15 min |
@@ -144,10 +124,8 @@ All external APIs are **public** — no API key required. CORS is handled by Nex
 | **Binance Futures** | Funding rate (8h), open interest | `/proxy/binfutures` | 1 min |
 | **mempool.space** | BTC mempool, recommended fees | `/proxy/mempool` | 2 min |
 
-### API Endpoints / 端点详情
-
 <details>
-<summary>Click to expand / 点击展开</summary>
+<summary>API endpoint details</summary>
 
 #### CCXT Exchange (via `/api/market`)
 ```
@@ -207,16 +185,7 @@ GET /proxy/mempool/api/mempool
 
 </details>
 
-### CCXT Coverage / CCXT 可替代性
-
-| Status | Data | Notes |
-|--------|------|-------|
-| Replaceable via CCXT | Funding rate, Open interest | `exchange.fetchFundingRate()` / `exchange.fetchOpenInterest()` |
-| Not replaceable | Fear & Greed Index, DeFi TVL, News, Global market cap, BTC dominance, CoinPaprika market cap, Mempool on-chain data | Third-party computed or multi-source aggregated |
-
----
-
-## Project Structure / 项目结构
+## Project Structure
 
 ```
 src/
@@ -254,41 +223,29 @@ src/
     └── index.ts                # Global TypeScript definitions
 ```
 
----
+## Tech Stack
 
-## Tech Stack / 技术栈
-
-| Layer / 层级 | Technology / 技术 |
-|-------------|------------------|
+| Layer | Technology |
+| --- | --- |
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS 4 |
 | AI | Anthropic SDK (Claude) |
-| Exchange | CCXT (multi-exchange support) |
+| Exchange | CCXT |
 | Local Storage | IndexedDB (via `idb`) |
 | Desktop | Electron + electron-builder |
 | Icons | Lucide React |
 | Fonts | Orbitron / JetBrains Mono |
 
----
-
-## Security / 安全
+## Security
 
 - **Exchange API keys** are stored in `sessionStorage` only — cleared when the tab is closed. Never written to localStorage, IndexedDB, or any persistent storage.
 - **AI API key** is stored in `sessionStorage` only — same ephemeral model.
-- **All external API calls** go through Next.js `rewrites` to avoid exposing the client's IP to third-party services.
+- **All external API calls** go through Next.js `rewrites` to avoid exposing the client IP.
 - **AI report rendering** uses `react-markdown` — no `dangerouslySetInnerHTML`.
 - **No server-side database** — all user data lives in the browser.
 
-> **交易所 API Key** 仅存储在 `sessionStorage` 中，关闭标签页即清除，绝不持久化。
-> **AI 密钥**同样仅存储于 `sessionStorage`。
-> **外部 API 调用**通过 Next.js `rewrites` 代理，避免客户端 IP 暴露。
-> **AI 报告渲染**使用 `react-markdown`，禁止 `dangerouslySetInnerHTML`。
-> **无服务端数据库** — 所有用户数据仅存在于浏览器端。
-
----
-
-## Caching / 缓存策略
+## Caching
 
 Cache is implemented in `src/lib/apiCache.ts` as a module-level `Map<string, { data, expiresAt }>`.
 
@@ -296,53 +253,20 @@ Cache is implemented in `src/lib/apiCache.ts` as a module-level `Map<string, { d
 - **Server**: Cache is shared across requests within the Node.js process lifetime.
 - **Default TTL**: `CACHE_TIME` env var (minutes), falls back to 15 min.
 
-| Tier / 级别 | TTL | Data Type / 数据类型 |
-|------------|-----|-------------------|
-| High-frequency / 高频 | 1 min | Real-time prices, funding rates, OI |
-| Mid-frequency / 中频 | 2–5 min | BTC on-chain, global market overview |
-| Low-frequency / 低频 | 10–15 min | News, Fear & Greed Index, DeFi TVL |
+| Tier | TTL | Data Type |
+| --- | --- | --- |
+| High-frequency | 1 min | Real-time prices, funding rates, OI |
+| Mid-frequency | 2–5 min | BTC on-chain, global market overview |
+| Low-frequency | 10–15 min | News, Fear & Greed Index, DeFi TVL |
 
-> 缓存实现在 `src/lib/apiCache.ts`，使用 module-level `Map` 存储，TTL 到期自动失效。
-> 浏览器端：缓存在当前 tab session 内有效。服务端：缓存在 Node.js 进程生命周期内跨请求复用。
+## Internationalization
 
----
-
-## Internationalization / 国际化
-
-English and Chinese are fully supported. The language switch lives in the header.
+English and Simplified Chinese are fully supported. The language switch lives in the header.
 
 - **Translation dictionary**: `src/lib/i18n.ts` — all strings for both locales.
 - **Server-side detection**: Locale is stored in a cookie and read by `layout.tsx` during SSR, ensuring **zero hydration flicker**.
 - **Adding strings**: Add to both `zh` and `en` objects in `i18n.ts` — TypeScript enforces structural parity.
 
-> 完整支持英文和中文，切换按钮位于 Header 右侧。翻译字典位于 `src/lib/i18n.ts`。
-> 语言偏好通过 Cookie + 服务端读取实现 SSR 时即输出正确语言，**零 hydration 闪烁**。
+## License
 
----
-
-## Desktop App / 桌面应用
-
-CryptoAdvisor AI can be packaged as a standalone desktop application using Electron.
-
-```bash
-# Development (hot reload)
-npm run electron:dev
-
-# Build macOS (.dmg, universal: x64 + arm64)
-npm run electron:build:mac
-
-# Build Windows (.exe installer + portable)
-npm run electron:build:win
-```
-
----
-
-## License / 许可
-
-MIT License — see [LICENSE](./LICENSE) for details.
-
----
-
-<p align="center">
-  <sub>Built with ❤️ for the crypto community. / 为加密社区打造。</sub>
-</p>
+MIT. See [`LICENSE`](./LICENSE).
